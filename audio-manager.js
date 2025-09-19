@@ -60,6 +60,15 @@ class AudioManager {
         return true;
     }
 
+    // Helper method to convert numbers to words for TTS
+    numberToWord(num) {
+        const words = [
+            '', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 
+            'Seven', 'Eight', 'Nine', 'Ten', 'Eleven', 'Twelve'
+        ];
+        return words[num] || num.toString();
+    }
+
     // Play count-in using Text-to-Speech with precise beat timing
     playCountInVoice(isAccented = false, tempo = 120, timeSignature = 4) {
         if (!this.isAudioReady || !this.audioContext) {
@@ -76,17 +85,14 @@ class AudioManager {
             }
 
             // Determine what to say based on time signature
-            let words;
-            if (timeSignature === 4) {
-                words = ['One', 'Two', 'Three', 'Four'];
-            } else if (timeSignature === 3) {
-                words = ['One', 'Two', 'Three'];
-            } else if (timeSignature === 2) {
-                words = ['One', 'Two'];
-            } else {
-                // For other time signatures, use 4/4 as default
-                words = ['One', 'Two', 'Three', 'Four'];
+            let words = [];
+            
+            // Generate count words based on the actual time signature numerator
+            console.log(`TTS Count-in: Time signature = ${timeSignature}, Tempo = ${tempo}`);
+            for (let i = 1; i <= timeSignature; i++) {
+                words.push(this.numberToWord(i));
             }
+            console.log(`TTS Count-in words:`, words);
             
             // Calculate beat duration in milliseconds
             const beatDurationMs = (60 / tempo) * 1000;
