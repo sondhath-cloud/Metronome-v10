@@ -313,9 +313,18 @@ body {
     cursor: pointer;
 }
 
+.beat-emphasis-section h3 {
+    margin-bottom: 15px;
+    color: #333;
+    font-size: 1.1rem;
+    font-weight: 500;
+    text-align: center;
+}
+
 .emphasis-presets {
     display: flex;
     gap: 8px;
+    margin-bottom: 20px;
 }
 
 .preset-btn {
