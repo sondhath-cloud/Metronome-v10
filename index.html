@@ -35,38 +35,37 @@
 
             <!-- Advanced Controls Section -->
             <section class="controls-section" id="controlsSection">
-                <!-- Tempo Controls -->
-                <div class="control-tile" data-tile-id="tempo">
+                <!-- Tempo and Time Signature Controls -->
+                <div class="control-tile" data-tile-id="tempo-and-signature">
                     <div class="drag-handle"></div>
-                    <div class="tempo-controls">
-                        <div class="tempo-buttons">
-                            <button class="tempo-btn" id="tempoMinus10">-10</button>
-                            <button class="tempo-btn" id="tempoMinus1">-1</button>
-                            <button class="tempo-btn" id="tempoPlus1">+1</button>
-                            <button class="tempo-btn" id="tempoPlus10">+10</button>
+                    <div class="tempo-and-signature-controls">
+                        <div class="tempo-section">
+                            <h3>Tempo</h3>
+                            <div class="tempo-buttons">
+                                <button class="tempo-btn" id="tempoMinus10">-10</button>
+                                <button class="tempo-btn" id="tempoMinus1">-1</button>
+                                <button class="tempo-btn" id="tempoPlus1">+1</button>
+                                <button class="tempo-btn" id="tempoPlus10">+10</button>
+                            </div>
+                            <button class="tap-tempo-btn" id="tapTempoAdvanced">Tap Tempo</button>
                         </div>
-                        <button class="tap-tempo-btn" id="tapTempoAdvanced">Tap Tempo</button>
-                    </div>
-                </div>
-
-                <!-- Time Signature Controls -->
-                <div class="control-tile" data-tile-id="time-signature">
-                    <div class="drag-handle"></div>
-                    <div class="time-signature-controls">
-                        <select class="time-signature-select" id="timeSignatureSelect">
-                            <option value="4/4">4/4</option>
-                            <option value="3/4">3/4</option>
-                            <option value="2/4">2/4</option>
-                            <option value="6/8">6/8</option>
-                            <option value="9/8">9/8</option>
-                            <option value="12/8">12/8</option>
-                            <option value="5/4">5/4</option>
-                            <option value="7/8">7/8</option>
-                            <option value="5/8">5/8</option>
-                            <option value="2/2">2/2</option>
-                            <option value="3/8">3/8</option>
-                            <option value="6/4">6/4</option>
-                        </select>
+                        <div class="time-signature-section">
+                            <h3>Time Signature</h3>
+                            <select class="time-signature-select" id="timeSignatureSelect">
+                                <option value="4/4">4/4</option>
+                                <option value="3/4">3/4</option>
+                                <option value="2/4">2/4</option>
+                                <option value="6/8">6/8</option>
+                                <option value="9/8">9/8</option>
+                                <option value="12/8">12/8</option>
+                                <option value="5/4">5/4</option>
+                                <option value="7/8">7/8</option>
+                                <option value="5/8">5/8</option>
+                                <option value="2/2">2/2</option>
+                                <option value="3/8">3/8</option>
+                                <option value="6/4">6/4</option>
+                            </select>
+                        </div>
                     </div>
                 </div>
 
@@ -222,11 +221,6 @@
             </section>
         </div>
 
-        <!-- Info Section (Shared) -->
-        <div class="info" id="infoSection">
-            <h2>What is a metronome?</h2>
-            <p>A <em>metronome</em> is a device that produces a steady pulse to help musicians play in time. The pulse is measured in <em>BPM</em> (beats-per-minute). A tempo marking of 60 BPM equals one beat per second, while 120 BPM equals two beats per second.</p>
-        </div>
     </div>
 
     <script src="audio-manager.js"></script>
