@@ -408,6 +408,7 @@ class UIController {
         };
         
         this.updateDisplay();
+        this.updatePresetButtonText();
         
         console.log('UIController initialized in advanced mode');
     }
@@ -624,22 +625,56 @@ class UIController {
         if (this.core.displayMode === 'dots' || this.core.displayMode === 'both') {
             this.generateAdvancedBeatDots();
         }
+        
+        this.updatePresetButtonText();
     }
     
     applyEmphasisPreset(preset) {
         const checkboxes = document.querySelectorAll('.emphasis-checkbox');
+        const allBtn = document.querySelector('.preset-btn[data-preset="all"]');
+        
+        // Check if all beats are currently emphasized
+        const allBeatsEmphasized = Array.from(checkboxes).every(checkbox => {
+            const beat = parseInt(checkbox.dataset.beat);
+            return beat > this.core.beatsPerBar || checkbox.checked;
+        });
         
         checkboxes.forEach(checkbox => {
             const beat = parseInt(checkbox.dataset.beat);
             
             switch (preset) {
                 case 'all':
-                    checkbox.checked = beat <= this.core.beatsPerBar;
+                    if (allBeatsEmphasized) {
+                        // If all beats are emphasized, clear all
+                        checkbox.checked = false;
+                        if (allBtn) allBtn.textContent = 'All Beats';
+                    } else {
+                        // If not all beats are emphasized, select all
+                        checkbox.checked = beat <= this.core.beatsPerBar;
+                        if (allBtn) allBtn.textContent = 'Select None';
+                    }
                     break;
             }
         });
         
         this.updateBeatEmphasis();
+        this.updatePresetButtonText();
+    }
+    
+    updatePresetButtonText() {
+        const checkboxes = document.querySelectorAll('.emphasis-checkbox');
+        const allBtn = document.querySelector('.preset-btn[data-preset="all"]');
+        
+        if (!allBtn) return;
+        
+        // Check if all beats are currently emphasized
+        const allBeatsEmphasized = Array.from(checkboxes).every(checkbox => {
+            const beat = parseInt(checkbox.dataset.beat);
+            return beat > this.core.beatsPerBar || checkbox.checked;
+        });
+        
+        // Update button text based on current state
+        allBtn.textContent = allBeatsEmphasized ? 'Select None' : 'All Beats';
     }
     
     generateAdvancedBeatDots() {
