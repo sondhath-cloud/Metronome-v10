@@ -68,9 +68,24 @@ class MetronomeCore {
         
         this.isPlaying = true;
         this.currentBeat = 1;
+        this.currentSubdivision = 0;
         this.resetPattern();
         
-        const interval = (60 / this.tempo) * 1000;
+        const baseInterval = (60 / this.tempo) * 1000;
+        
+        // Determine subdivision interval based on current subdivision setting
+        let subdivisionInterval;
+        switch (this.subdivision) {
+            case 'eighth':
+                subdivisionInterval = baseInterval / 2;
+                break;
+            case 'sixteenth':
+                subdivisionInterval = baseInterval / 4;
+                break;
+            default: // quarter
+                subdivisionInterval = baseInterval;
+                break;
+        }
         
         // Play first beat immediately
         this.playBeat();
@@ -80,13 +95,12 @@ class MetronomeCore {
             this.onBeatChange();
         }
         
-        // Set up interval for subsequent beats
+        // Set up interval for subdivisions
         this.intervalId = setInterval(() => {
-            this.nextBeat();
-            this.playBeat();
-        }, interval);
+            this.nextSubdivision();
+        }, subdivisionInterval);
         
-        console.log('Metronome started at', this.tempo, 'BPM');
+        console.log('Metronome started at', this.tempo, 'BPM with', this.subdivision, 'subdivisions');
     }
     
     stop() {
@@ -94,6 +108,7 @@ class MetronomeCore {
         
         this.isPlaying = false;
         this.currentBeat = 1;
+        this.currentSubdivision = 0;
         
         if (this.intervalId) {
             clearInterval(this.intervalId);
@@ -127,6 +142,38 @@ class MetronomeCore {
         }
         
         // Notify UI of beat change
+        if (this.onBeatChange) {
+            this.onBeatChange();
+        }
+    }
+    
+    nextSubdivision() {
+        this.currentSubdivision++;
+        
+        // Determine how many subdivisions per beat based on subdivision setting
+        let subdivisionsPerBeat;
+        switch (this.subdivision) {
+            case 'eighth':
+                subdivisionsPerBeat = 2;
+                break;
+            case 'sixteenth':
+                subdivisionsPerBeat = 4;
+                break;
+            default: // quarter
+                subdivisionsPerBeat = 1;
+                break;
+        }
+        
+        // Check if we've completed a full beat
+        if (this.currentSubdivision >= subdivisionsPerBeat) {
+            this.currentSubdivision = 0;
+            this.nextBeat();
+        }
+        
+        // Play sound for this subdivision
+        this.playBeat();
+        
+        // Update UI
         if (this.onBeatChange) {
             this.onBeatChange();
         }
@@ -176,20 +223,40 @@ class MetronomeCore {
             return;
         }
         
+        // Determine if this is a main beat (subdivision 0) or a subdivision
+        const isMainBeat = this.currentSubdivision === 0;
+        
+        // Only play subdivision sounds if enabled, or if it's a main beat
+        if (!isMainBeat && !this.playSubdivisionSounds) {
+            return;
+        }
+        
         // Determine if this is an emphasized beat - only emphasize explicitly selected beats
         const isEmphasized = this.emphasizedBeats.includes(this.currentBeat);
         
         // Play the appropriate sound
         if (this.beatSound === 'classic') {
-            this.playClassicClick(isEmphasized);
+            this.playClassicClick(isEmphasized, isMainBeat);
         } else {
             this.audioManager.playBeat(this.beatSound, this.currentBeat, isEmphasized);
         }
     }
     
-    playClassicClick(isEmphasized = false) {
-        const frequency = isEmphasized ? 1200 : 800;
-        const volume = isEmphasized ? 0.8 : 0.6;
+    playClassicClick(isEmphasized = false, isMainBeat = true) {
+        // Determine sound characteristics based on emphasis and whether it's a main beat
+        let frequency, volume;
+        
+        if (isEmphasized) {
+            frequency = 1200;
+            volume = 0.8;
+        } else if (isMainBeat) {
+            frequency = 800;
+            volume = 0.6;
+        } else {
+            // Subdivision sound - softer and lower pitch
+            frequency = 600;
+            volume = 0.3;
+        }
         
         if (this.audioManager && this.audioManager.audioContext) {
             try {
@@ -401,6 +468,9 @@ class UIController {
                 document.querySelectorAll('.subdivision-btn').forEach(b => b.classList.remove('active'));
                 e.target.classList.add('active');
                 this.core.setSubdivision(e.target.dataset.subdivision);
+                // Regenerate beat dots to show new subdivision pattern
+                this.updateDisplayMode();
+                this.updateDisplay();
             });
         });
         
@@ -423,6 +493,12 @@ class UIController {
             radio.addEventListener('change', (e) => {
                 this.core.setBeatSound(e.target.value);
             });
+        });
+        
+        // Subdivision emphasis toggle
+        document.getElementById('subdivisionEmphasisToggle').addEventListener('change', (e) => {
+            this.core.playSubdivisionSounds = e.target.checked;
+            this.updateDisplay();
         });
         
         // Display mode
@@ -575,20 +651,47 @@ class UIController {
         
         advancedBeatDots.innerHTML = '';
         
-        for (let i = 1; i <= this.core.beatsPerBar; i++) {
-            const dot = document.createElement('div');
-            dot.className = 'beat-dot';
-            dot.dataset.beat = i;
-            
-            // Check if this beat should be emphasized
-            if (this.core.emphasizedBeats.includes(i)) {
-                dot.classList.add('emphasized');
-            }
-            
-            advancedBeatDots.appendChild(dot);
+        // Determine how many subdivisions per beat
+        let subdivisionsPerBeat;
+        switch (this.core.subdivision) {
+            case 'eighth':
+                subdivisionsPerBeat = 2;
+                break;
+            case 'sixteenth':
+                subdivisionsPerBeat = 4;
+                break;
+            default: // quarter
+                subdivisionsPerBeat = 1;
+                break;
         }
         
-        console.log(`Generated ${this.core.beatsPerBar} advanced beat dots`);
+        // Generate dots for each beat and subdivision
+        for (let beat = 1; beat <= this.core.beatsPerBar; beat++) {
+            for (let sub = 0; sub < subdivisionsPerBeat; sub++) {
+                const dot = document.createElement('div');
+                dot.className = 'beat-dot';
+                dot.dataset.beat = beat;
+                dot.dataset.subdivision = sub;
+                
+                // Main beat dots are larger and emphasized if selected
+                if (sub === 0) {
+                    dot.classList.add('main-beat');
+                    if (this.core.emphasizedBeats.includes(beat)) {
+                        dot.classList.add('emphasized');
+                    }
+                } else {
+                    dot.classList.add('subdivision');
+                    // Only show subdivision dots if subdivision emphasis is enabled
+                    if (!this.core.playSubdivisionSounds) {
+                        dot.style.display = 'none';
+                    }
+                }
+                
+                advancedBeatDots.appendChild(dot);
+            }
+        }
+        
+        console.log(`Generated ${this.core.beatsPerBar} beats with ${subdivisionsPerBeat} subdivisions each`);
     }
     
     updateDisplayMode() {
@@ -639,19 +742,39 @@ class UIController {
         
         // Update advanced beat dots
         const advancedDots = document.querySelectorAll('#advancedBeatDots .beat-dot');
-        console.log(`Found ${advancedDots.length} advanced dots, current beat: ${this.core.currentBeat}`);
-        advancedDots.forEach((dot, index) => {
-            const isActive = (index + 1) === this.core.currentBeat;
+        console.log(`Found ${advancedDots.length} advanced dots, current beat: ${this.core.currentBeat}, subdivision: ${this.core.currentSubdivision}`);
+        
+        advancedDots.forEach((dot) => {
+            const beat = parseInt(dot.dataset.beat);
+            const subdivision = parseInt(dot.dataset.subdivision);
+            
+            // Check if this dot should be active
+            const isActive = (beat === this.core.currentBeat && subdivision === this.core.currentSubdivision);
             dot.classList.toggle('active', isActive);
-            if (isActive) {
-                console.log(`Activating advanced dot ${index + 1}`);
+            
+            // Show/hide subdivision dots based on subdivision emphasis setting
+            if (dot.classList.contains('subdivision')) {
+                dot.style.display = this.core.playSubdivisionSounds ? '' : 'none';
             }
         });
         
         // Update pulsing circle
         const pulsingCircle = document.getElementById('pulsingCircle');
         if (pulsingCircle) {
-            pulsingCircle.classList.toggle('pulse', this.core.isPlaying);
+            // Remove all pulse classes first
+            pulsingCircle.classList.remove('pulse', 'pulse-main', 'pulse-subdivision');
+            
+            if (this.core.isPlaying) {
+                const isMainBeat = this.core.currentSubdivision === 0;
+                
+                if (isMainBeat) {
+                    pulsingCircle.classList.add('pulse-main');
+                } else if (this.core.playSubdivisionSounds) {
+                    pulsingCircle.classList.add('pulse-subdivision');
+                } else {
+                    pulsingCircle.classList.add('pulse');
+                }
+            }
         }
         
         
