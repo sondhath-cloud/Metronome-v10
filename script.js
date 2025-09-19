@@ -219,7 +219,7 @@ class MetronomeCore {
     }
     
     togglePlayback() {
-        if (this.isPlaying) {
+        if (this.isActive()) {
             this.stop();
         } else {
             this.start();
@@ -1528,14 +1528,19 @@ The detected tempo can be applied to your metronome by clicking the detected tem
     updateMetronomeButtons() {
         const countInBtn = document.getElementById('metronomeCountInBtn');
         
-        if (this.core.isActive()) {
-            // Metronome is active, show stop button
+        if (this.core.isCountInActive) {
+            // Count-in is active, show counting-in button
+            countInBtn.textContent = 'Counting-In';
+            countInBtn.classList.add('counting-in');
+        } else if (this.core.isPlaying) {
+            // Metronome is playing, show stop button
             countInBtn.textContent = 'Stop Metronome';
             countInBtn.classList.add('stopped');
+            countInBtn.classList.remove('counting-in');
         } else {
             // Metronome is stopped, show start button
             countInBtn.textContent = 'Start with Count-In';
-            countInBtn.classList.remove('stopped');
+            countInBtn.classList.remove('stopped', 'counting-in');
         }
     }
     

@@ -74,7 +74,9 @@ body {
 }
 
 .beat-visualization {
-    margin-bottom: 20px;
+    margin-bottom: 60px;
+    position: relative;
+    z-index: 1;
 }
 
 .pulsing-circle {
@@ -123,8 +125,11 @@ body {
     max-width: 100%;
     padding: 0 10px;
     margin-top: 20px;
+    margin-bottom: 40px;
     flex-wrap: wrap;
     gap: 4px;
+    position: relative;
+    z-index: 1;
 }
 
 .advanced-beat-dots .beat-dot {
@@ -183,7 +188,7 @@ body {
     align-items: center;
     justify-content: center;
     gap: 15px;
-    margin-bottom: 20px;
+    margin-bottom: 40px;
 }
 
 .tempo-controls-display .tempo-display {
@@ -226,10 +231,11 @@ body {
     bottom: 20px;
     left: 20px;
     right: 20px;
-    z-index: 10;
+    z-index: 20;
     display: flex;
     justify-content: space-between;
     align-items: center;
+    padding-top: 20px;
 }
 
 .metronome-tap-tempo-btn,
@@ -284,6 +290,17 @@ body {
 
 .metronome-countin-btn:active {
     transform: translateY(0);
+}
+
+.metronome-countin-btn.counting-in {
+    background-color: #9e9e9e;
+    color: white;
+    cursor: not-allowed;
+}
+
+.metronome-countin-btn.counting-in:hover {
+    background-color: #9e9e9e;
+    transform: none;
 }
 
 .metronome-start-btn.stopped, .metronome-countin-btn.stopped, .metronome-tap-tempo-btn.stopped {
@@ -1043,10 +1060,51 @@ body.dark-mode .tap-tempo-section h3 {
 }
 
 /* Additional responsive breakpoints for beat dots */
-@media (max-width: 480px) {
+@media (max-width: 768px) {
+    .beat-visualization {
+        margin-bottom: 80px;
+        padding: 20px 0;
+    }
+    
     .advanced-beat-dots {
-        gap: 1px;
-        padding: 0 2px;
+        margin-bottom: 60px;
+        padding: 0 20px;
+        gap: 8px;
+    }
+    
+    .advanced-beat-dots .beat-dot {
+        width: 14px;
+        height: 14px;
+    }
+    
+    .advanced-beat-dots .beat-dot.main-beat {
+        width: 16px;
+        height: 16px;
+    }
+    
+    .advanced-beat-dots .beat-dot.subdivision {
+        width: 10px;
+        height: 10px;
+    }
+    
+    .metronome-controls {
+        padding-top: 30px;
+        bottom: 15px;
+    }
+}
+
+@media (max-width: 480px) {
+    .beat-visualization {
+        margin-bottom: 100px;
+        padding: 30px 0;
+    }
+    
+    .advanced-beat-dots {
+        margin-bottom: 80px;
+        padding: 0 30px;
+        gap: 6px;
+        flex-wrap: wrap;
+        justify-content: center;
     }
     
     .advanced-beat-dots .beat-dot {
@@ -1055,13 +1113,26 @@ body.dark-mode .tap-tempo-section h3 {
     }
     
     .advanced-beat-dots .beat-dot.main-beat {
-        width: 12px;
-        height: 12px;
+        width: 14px;
+        height: 14px;
     }
     
     .advanced-beat-dots .beat-dot.subdivision {
         width: 8px;
         height: 8px;
+    }
+    
+    .metronome-controls {
+        padding-top: 40px;
+        bottom: 10px;
+        flex-direction: column;
+        gap: 15px;
+    }
+    
+    .metronome-tap-tempo-btn,
+    .metronome-countin-btn {
+        width: 100%;
+        max-width: 200px;
     }
 }
 
@@ -1264,6 +1335,15 @@ body.dark-mode .metronome-start-btn.stopped:hover,
 body.dark-mode .metronome-tap-tempo-btn.stopped:hover,
 body.dark-mode .metronome-countin-btn.stopped:hover {
     background-color: #b71c1c;
+}
+
+body.dark-mode .metronome-countin-btn.counting-in {
+    background-color: #616161;
+    color: #e0e0e0;
+}
+
+body.dark-mode .metronome-countin-btn.counting-in:hover {
+    background-color: #616161;
 }
 
 /* Responsive design for microphone controls */
