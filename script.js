@@ -681,8 +681,9 @@ class UIController {
                     }
                 } else {
                     dot.classList.add('subdivision');
-                    // Only show subdivision dots if subdivision emphasis is enabled
-                    if (!this.core.playSubdivisionSounds) {
+                    // Always show subdivision dots when subdivisions are being used (8th or 16th notes)
+                    const hasSubdivisions = this.core.subdivision === 'eighth' || this.core.subdivision === 'sixteenth';
+                    if (!hasSubdivisions) {
                         dot.style.display = 'none';
                     }
                 }
@@ -752,9 +753,10 @@ class UIController {
             const isActive = (beat === this.core.currentBeat && subdivision === this.core.currentSubdivision);
             dot.classList.toggle('active', isActive);
             
-            // Show/hide subdivision dots based on subdivision emphasis setting
+            // Always show subdivision dots when subdivisions are being used (8th or 16th notes)
             if (dot.classList.contains('subdivision')) {
-                dot.style.display = this.core.playSubdivisionSounds ? '' : 'none';
+                const hasSubdivisions = this.core.subdivision === 'eighth' || this.core.subdivision === 'sixteenth';
+                dot.style.display = hasSubdivisions ? '' : 'none';
             }
         });
         
@@ -769,10 +771,9 @@ class UIController {
                 
                 if (isMainBeat) {
                     pulsingCircle.classList.add('pulse-main');
-                } else if (this.core.playSubdivisionSounds) {
-                    pulsingCircle.classList.add('pulse-subdivision');
                 } else {
-                    pulsingCircle.classList.add('pulse');
+                    // Always show subdivision pulses when subdivisions are active
+                    pulsingCircle.classList.add('pulse-subdivision');
                 }
             }
         }
