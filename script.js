@@ -176,13 +176,12 @@ class MetronomeCore {
             return;
         }
         
-        // Determine if this is an emphasized beat
+        // Determine if this is an emphasized beat - only emphasize explicitly selected beats
         const isEmphasized = this.emphasizedBeats.includes(this.currentBeat);
-        const isDownbeat = this.currentBeat === 1;
         
         // Play the appropriate sound
         if (this.beatSound === 'classic') {
-            this.playClassicClick(isEmphasized || isDownbeat);
+            this.playClassicClick(isEmphasized);
         } else {
             this.audioManager.playBeat(this.beatSound, this.currentBeat, isEmphasized);
         }
@@ -560,12 +559,6 @@ class UIController {
             switch (preset) {
                 case 'all':
                     checkbox.checked = beat <= this.core.beatsPerBar;
-                    break;
-                case 'downbeat':
-                    checkbox.checked = beat === 1;
-                    break;
-                case 'offbeat':
-                    checkbox.checked = beat > 1 && beat <= this.core.beatsPerBar && beat % 2 === 0;
                     break;
             }
         });
