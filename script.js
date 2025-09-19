@@ -51,6 +51,12 @@ class MetronomeCore {
         this.microphoneInput = null;
         this.isMicrophoneEnabled = false;
         
+        // Count-in functionality
+        this.isCountInActive = false;
+        this.countInBeats = 0;
+        this.countInCurrentBeat = 0;
+        this.countInIntervalId = null;
+        
         // Display
         this.displayMode = 'circle';
     }
@@ -490,6 +496,96 @@ class MetronomeCore {
         }
         return false;
     }
+    
+    // Count-in methods
+    startCountIn() {
+        if (this.isPlaying || this.isCountInActive) return;
+        
+        this.isCountInActive = true;
+        this.countInBeats = this.timeSignature.numerator;
+        
+        console.log(`Starting count-in: ${this.countInBeats} beats at ${this.tempo} BPM`);
+        
+        // Play complete count-in in one go
+        this.playCountInBeat();
+        
+        // Calculate total count-in duration (one full measure)
+        const beatDuration = (60 / this.tempo) * 1000; // Duration in milliseconds per beat
+        const totalDuration = beatDuration * this.countInBeats; // Total duration for full count
+        
+        // Set up timer to start regular metronome after count-in
+        this.countInIntervalId = setTimeout(() => {
+            this.finishCountIn();
+        }, totalDuration);
+    }
+    
+    playCountInBeat() {
+        // Play the complete count-in using TTS
+        this.audioManager.playCountInVoice(false, this.tempo, this.timeSignature.numerator);
+        console.log(`Count-in: ${this.countInBeats} beats at ${this.tempo} BPM`);
+    }
+    
+    finishCountIn() {
+        // Clear count-in timeout
+        if (this.countInIntervalId) {
+            clearTimeout(this.countInIntervalId);
+            this.countInIntervalId = null;
+        }
+        
+        // Reset count-in state
+        this.isCountInActive = false;
+        this.countInBeats = 0;
+        
+        // Reset bar counter as requested
+        this.barCount = 0;
+        this.beatCount = 0;
+        
+        // Start regular metronome
+        this.start();
+        console.log('Count-in finished, starting regular metronome');
+    }
+    
+    stopCountIn() {
+        if (this.countInIntervalId) {
+            clearTimeout(this.countInIntervalId);
+            this.countInIntervalId = null;
+        }
+        
+        this.isCountInActive = false;
+        this.countInBeats = 0;
+        
+        console.log('Count-in stopped');
+    }
+    
+    // Override stop method to handle count-in
+    stop() {
+        if (this.isCountInActive) {
+            this.stopCountIn();
+        }
+        
+        if (!this.isPlaying) return;
+        
+        this.isPlaying = false;
+        this.currentBeat = 1;
+        this.currentSubdivision = 0;
+        
+        if (this.intervalId) {
+            clearInterval(this.intervalId);
+            this.intervalId = null;
+        }
+        
+        // Update UI when stopped
+        if (this.onBeatChange) {
+            this.onBeatChange();
+        }
+        
+        console.log('Metronome stopped');
+    }
+    
+    // Check if metronome is active (playing or count-in)
+    isActive() {
+        return this.isPlaying || this.isCountInActive;
+    }
 }
 
 class UIController {
@@ -539,12 +635,16 @@ class UIController {
     
     
     setupAdvancedModeControls() {
-        // Metronome display click
+        // Metronome display click (retain existing functionality)
         const metronomeDisplay = document.getElementById('metronomeDisplay');
         if (metronomeDisplay) {
-            metronomeDisplay.addEventListener('click', () => {
-                this.core.togglePlayback();
-                this.updateDisplay();
+            metronomeDisplay.addEventListener('click', (e) => {
+                // Only toggle if clicking on the display area, not the buttons
+                if (e.target === metronomeDisplay || e.target.closest('.beat-visualization') || e.target.closest('.tempo-display')) {
+                    this.core.togglePlayback();
+                    this.updateDisplay();
+                    this.updateMetronomeButtons();
+                }
             });
         }
         
@@ -685,6 +785,9 @@ class UIController {
         
         // Microphone input controls
         this.setupMicrophoneControls();
+        
+        // Count-in controls
+        this.setupCountInControls();
     }
     
     setupSharedControls() {
@@ -956,6 +1059,9 @@ class UIController {
         if (timeSignatureSelect) {
             timeSignatureSelect.value = `${this.core.timeSignature.numerator}/${this.core.timeSignature.denominator}`;
         }
+        
+        // Update metronome button states
+        this.updateMetronomeButtons();
     }
     
     toggleVoiceRecognition() {
@@ -1381,6 +1487,60 @@ Tips for best results:
 The detected tempo can be applied to your metronome by clicking the detected tempo value.`;
         
         alert(helpText);
+    }
+    
+    setupCountInControls() {
+        // Start Metronome button
+        document.getElementById('metronomeStartBtn').addEventListener('click', () => {
+            this.toggleMetronome();
+        });
+        
+        // Start with Count-In button
+        document.getElementById('metronomeCountInBtn').addEventListener('click', () => {
+            this.toggleCountIn();
+        });
+        
+        // Update button states
+        this.updateMetronomeButtons();
+    }
+    
+    toggleMetronome() {
+        if (this.core.isActive()) {
+            this.core.stop();
+            this.updateMetronomeButtons();
+        } else {
+            this.core.start();
+            this.updateMetronomeButtons();
+        }
+    }
+    
+    toggleCountIn() {
+        if (this.core.isActive()) {
+            this.core.stop();
+            this.updateMetronomeButtons();
+        } else {
+            this.core.startCountIn();
+            this.updateMetronomeButtons();
+        }
+    }
+    
+    updateMetronomeButtons() {
+        const startBtn = document.getElementById('metronomeStartBtn');
+        const countInBtn = document.getElementById('metronomeCountInBtn');
+        
+        if (this.core.isActive()) {
+            // Metronome is active, show stop buttons
+            startBtn.textContent = 'Stop Metronome';
+            startBtn.classList.add('stopped');
+            countInBtn.textContent = 'Stop Metronome';
+            countInBtn.classList.add('stopped');
+        } else {
+            // Metronome is stopped, show start buttons
+            startBtn.textContent = 'Start Metronome';
+            startBtn.classList.remove('stopped');
+            countInBtn.textContent = 'Start with Count-In';
+            countInBtn.classList.remove('stopped');
+        }
     }
 }
 

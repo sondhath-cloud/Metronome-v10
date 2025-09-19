@@ -60,6 +60,120 @@ class AudioManager {
         return true;
     }
 
+    // Play count-in using Text-to-Speech with precise beat timing
+    playCountInVoice(isAccented = false, tempo = 120, timeSignature = 4) {
+        if (!this.isAudioReady || !this.audioContext) {
+            console.log('Audio not ready, skipping count-in TTS');
+            return;
+        }
+
+        try {
+            // Check if speech synthesis is available
+            if (!('speechSynthesis' in window)) {
+                console.warn('Speech synthesis not available, using fallback');
+                this.playCountInFallback(isAccented);
+                return;
+            }
+
+            // Determine what to say based on time signature
+            let words;
+            if (timeSignature === 4) {
+                words = ['One', 'Two', 'Three', 'Four'];
+            } else if (timeSignature === 3) {
+                words = ['One', 'Two', 'Three'];
+            } else if (timeSignature === 2) {
+                words = ['One', 'Two'];
+            } else {
+                // For other time signatures, use 4/4 as default
+                words = ['One', 'Two', 'Three', 'Four'];
+            }
+            
+            // Calculate beat duration in milliseconds
+            const beatDurationMs = (60 / tempo) * 1000;
+            
+            // Calculate speech rate based on tempo
+            // For fast tempos, we need to speed up the speech rate
+            let speechRate = 1.0;
+            if (tempo > 120) {
+                // Scale speech rate for faster tempos
+                speechRate = Math.min(3.0, 1.0 + (tempo - 120) / 120);
+            } else if (tempo < 80) {
+                // Slightly slower for very slow tempos
+                speechRate = Math.max(0.5, 0.8 + (tempo - 60) / 100);
+            }
+            
+            // Speak each word at exactly the beat timing
+            words.forEach((word, index) => {
+                setTimeout(() => {
+                    const utterance = new SpeechSynthesisUtterance(word);
+                    utterance.volume = this.volume;
+                    utterance.rate = speechRate; // Adjusted speech rate
+                    utterance.pitch = index === 0 ? 1.2 : 1.0; // Accent first beat
+                    speechSynthesis.speak(utterance);
+                }, index * beatDurationMs);
+            });
+            
+        } catch (error) {
+            console.warn('Error playing count-in TTS:', error);
+            // Fallback to synthesized sound
+            this.playCountInFallback(isAccented);
+        }
+    }
+    
+    // Fallback synthesized sound if audio files are not available
+    playCountInFallback(isAccented = false) {
+        if (!this.isAudioReady || !this.audioContext) {
+            console.log('Audio not ready, skipping count-in fallback');
+            return;
+        }
+
+        try {
+            const now = this.audioContext.currentTime;
+            const duration = 0.08;
+            
+            // Create multiple oscillators for count-in sound
+            const osc1 = this.audioContext.createOscillator();
+            const osc2 = this.audioContext.createOscillator();
+            const gainNode = this.audioContext.createGain();
+            const filter = this.audioContext.createBiquadFilter();
+            
+            // Count-in frequencies - lower and more resonant
+            const baseFreq = isAccented ? 400 : 300;
+            const volume = isAccented ? 0.7 : 0.5;
+            
+            osc1.frequency.setValueAtTime(baseFreq, now);
+            osc1.type = 'sawtooth';
+            
+            osc2.frequency.setValueAtTime(baseFreq * 1.5, now);
+            osc2.type = 'triangle';
+            
+            // Low-pass filter for character
+            filter.type = 'lowpass';
+            filter.frequency.setValueAtTime(800, now);
+            filter.Q.setValueAtTime(2, now);
+            
+            // Envelope - quick attack, natural decay
+            gainNode.gain.setValueAtTime(0, now);
+            gainNode.gain.linearRampToValueAtTime(volume * this.volume, now + 0.005);
+            gainNode.gain.exponentialRampToValueAtTime(0.001, now + duration);
+            
+            // Connect audio graph
+            osc1.connect(filter);
+            osc2.connect(filter);
+            filter.connect(gainNode);
+            gainNode.connect(this.masterGain);
+            
+            // Play the sound
+            osc1.start(now);
+            osc1.stop(now + duration);
+            osc2.start(now);
+            osc2.stop(now + duration);
+            
+        } catch (error) {
+            console.warn('Error playing count-in fallback:', error);
+        }
+    }
+
     // Play click sound - sharp metronome click
     playClick(frequency = 1200, volume = 0.6, attack = 0.001, decay = 0.02, sustain = 0, release = 0.01) {
         if (!this.isAudioReady || !this.audioContext) {
