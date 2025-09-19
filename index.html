@@ -94,31 +94,41 @@
                             </div>
                         </div>
                         
-                        <!-- Beat Emphasis Section -->
-                        <div class="beat-emphasis-section">
-                            <h3>Emphasis</h3>
-                            <div class="emphasis-wrapper">
-                                <div class="emphasis-options">
-                                    <label class="emphasis-option">
-                                        <input type="checkbox" class="emphasis-checkbox" data-beat="1" checked>
-                                        <span class="emphasis-label">Emphasize Beat 1</span>
-                                    </label>
-                                    <label class="emphasis-option">
-                                        <input type="checkbox" class="emphasis-checkbox" data-beat="2">
-                                        <span class="emphasis-label">Emphasize Beat 2</span>
-                                    </label>
-                                    <label class="emphasis-option">
-                                        <input type="checkbox" class="emphasis-checkbox" data-beat="3">
-                                        <span class="emphasis-label">Emphasize Beat 3</span>
-                                    </label>
-                                    <label class="emphasis-option">
-                                        <input type="checkbox" class="emphasis-checkbox" data-beat="4">
-                                        <span class="emphasis-label">Emphasize Beat 4</span>
-                                    </label>
+                        <!-- Emphasis and Display Section -->
+                        <div class="emphasis-display-section">
+                            <div class="emphasis-section">
+                                <h3>Emphasis</h3>
+                                <div class="emphasis-wrapper">
+                                    <div class="emphasis-options">
+                                        <label class="emphasis-option">
+                                            <input type="checkbox" class="emphasis-checkbox" data-beat="1" checked>
+                                            <span class="emphasis-label">Emphasize Beat 1</span>
+                                        </label>
+                                        <label class="emphasis-option">
+                                            <input type="checkbox" class="emphasis-checkbox" data-beat="2">
+                                            <span class="emphasis-label">Emphasize Beat 2</span>
+                                        </label>
+                                        <label class="emphasis-option">
+                                            <input type="checkbox" class="emphasis-checkbox" data-beat="3">
+                                            <span class="emphasis-label">Emphasize Beat 3</span>
+                                        </label>
+                                        <label class="emphasis-option">
+                                            <input type="checkbox" class="emphasis-checkbox" data-beat="4">
+                                            <span class="emphasis-label">Emphasize Beat 4</span>
+                                        </label>
+                                    </div>
+                                </div>
+                                <div class="emphasis-presets">
+                                    <button class="preset-btn" data-preset="all">All Beats</button>
                                 </div>
                             </div>
-                            <div class="emphasis-presets">
-                                <button class="preset-btn" data-preset="all">All Beats</button>
+                            <div class="display-section">
+                                <h3>Visual Display</h3>
+                                <div class="display-buttons">
+                                    <button class="display-btn active" data-display="circle">Pulsing Circle</button>
+                                    <button class="display-btn" data-display="dots">Beat Dots</button>
+                                    <button class="display-btn" data-display="both">Circle + Dots</button>
+                                </div>
                             </div>
                         </div>
                         
@@ -132,89 +142,73 @@
                     </div>
                 </div>
 
-                <!-- Bar Counter -->
-                <div class="control-tile" data-tile-id="bar-counter">
+                <!-- Sound, Counter, and Silent Pattern Controls -->
+                <div class="control-tile" data-tile-id="sound-counter-silent">
                     <div class="drag-handle"></div>
-                    <div class="counter-display">
-                        <div class="bar-count">
-                            <span class="counter-label">Bars:</span>
-                            <span class="counter-value" id="barCount">0</span>
-                        </div>
-                        <div class="beat-count">
-                            <span class="counter-label">Beats:</span>
-                            <span class="counter-value" id="beatCount">0</span>
-                        </div>
-                    </div>
-                    <button class="counter-reset-btn" id="counterResetBtn">Reset Counters</button>
-                </div>
-                
-                <!-- Visual Display Options -->
-                <div class="control-tile" data-tile-id="display-style">
-                    <div class="drag-handle"></div>
-                    <div class="display-buttons">
-                        <button class="display-btn active" data-display="circle">Pulsing Circle</button>
-                        <button class="display-btn" data-display="dots">Beat Dots</button>
-                        <button class="display-btn" data-display="both">Circle + Dots</button>
-                    </div>
-                </div>
-                
-                <!-- Sound Selection -->
-                <div class="control-tile" data-tile-id="sound-selection">
-                    <div class="drag-handle"></div>
-                    <div class="sound-controls">
-                        <h3>Beat Sounds</h3>
-                        <div class="sound-options">
-                            <div class="sound-option">
-                                <input type="radio" id="soundClassic" name="beatSound" value="classic" checked>
-                                <label for="soundClassic">Classic Click</label>
-                            </div>
-                            <div class="sound-option">
-                                <input type="radio" id="soundWood" name="beatSound" value="wood">
-                                <label for="soundWood">Xylophone</label>
-                            </div>
-                            <div class="sound-option">
-                                <input type="radio" id="soundBass" name="beatSound" value="bass">
-                                <label for="soundBass">Bass Guitar</label>
-                            </div>
-                            <div class="sound-option">
-                                <input type="radio" id="soundDrum" name="beatSound" value="drum">
-                                <label for="soundDrum">Drum</label>
-                            </div>
-                            <div class="sound-option">
-                                <input type="radio" id="soundPiano" name="beatSound" value="piano">
-                                <label for="soundPiano">Piano</label>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                
-                <!-- Silent Bars Control -->
-                <div class="control-tile" data-tile-id="silent-bars">
-                    <div class="drag-handle"></div>
-                    <div class="silent-bars-controls">
-                        <h3>Silent Patterns</h3>
-                        
-                        <!-- Mode Selection -->
-                        <div class="pattern-mode-selector">
-                            <button class="mode-btn active" data-mode="none">None</button>
-                            <button class="mode-btn" data-mode="pattern">Pattern</button>
-                        </div>
-                        
-                        <!-- Pattern Mode -->
-                        <div class="pattern-mode" id="patternModeAdvanced" style="display: none;">
-                            <div class="pattern-inputs">
-                                <div class="pattern-input-group">
-                                    <label for="activeBarsInput">Active bars:</label>
-                                    <input type="number" id="activeBarsInput" min="1" max="8" value="2" class="pattern-number">
+                    <div class="sound-counter-silent-controls">
+                        <div class="sound-section">
+                            <h3>Beat Sounds</h3>
+                            <div class="sound-options">
+                                <div class="sound-option">
+                                    <input type="radio" id="soundClassic" name="beatSound" value="classic" checked>
+                                    <label for="soundClassic">Classic Click</label>
                                 </div>
-                                <div class="pattern-input-group">
-                                    <label for="silentBarsPatternInput">Silent bars:</label>
-                                    <input type="number" id="silentBarsPatternInput" min="1" max="8" value="2" class="pattern-number">
+                                <div class="sound-option">
+                                    <input type="radio" id="soundWood" name="beatSound" value="wood">
+                                    <label for="soundWood">Xylophone</label>
+                                </div>
+                                <div class="sound-option">
+                                    <input type="radio" id="soundBass" name="beatSound" value="bass">
+                                    <label for="soundBass">Bass Guitar</label>
+                                </div>
+                                <div class="sound-option">
+                                    <input type="radio" id="soundDrum" name="beatSound" value="drum">
+                                    <label for="soundDrum">Drum</label>
+                                </div>
+                                <div class="sound-option">
+                                    <input type="radio" id="soundPiano" name="beatSound" value="piano">
+                                    <label for="soundPiano">Piano</label>
                                 </div>
                             </div>
                         </div>
                         
-                        <div class="silent-status" id="silentStatus"></div>
+                        <div class="counter-section">
+                            <h3>Bar Counter</h3>
+                            <div class="counter-display">
+                                <div class="bar-count">
+                                    <span class="counter-label">Bars:</span>
+                                    <span class="counter-value" id="barCount">0</span>
+                                </div>
+                                <div class="beat-count">
+                                    <span class="counter-label">Beats:</span>
+                                    <span class="counter-value" id="beatCount">0</span>
+                                </div>
+                            </div>
+                            <button class="counter-reset-btn" id="counterResetBtn">Reset Counters</button>
+                        </div>
+                        
+                        <div class="silent-section">
+                            <h3>Silent Patterns</h3>
+                            <div class="pattern-mode-selector">
+                                <button class="mode-btn active" data-mode="none">None</button>
+                                <button class="mode-btn" data-mode="pattern">Pattern</button>
+                            </div>
+                            
+                            <div class="pattern-mode" id="patternModeAdvanced" style="display: none;">
+                                <div class="pattern-inputs">
+                                    <div class="pattern-input-group">
+                                        <label for="activeBarsInput">Active bars:</label>
+                                        <input type="number" id="activeBarsInput" min="1" max="8" value="2" class="pattern-number">
+                                    </div>
+                                    <div class="pattern-input-group">
+                                        <label for="silentBarsPatternInput">Silent bars:</label>
+                                        <input type="number" id="silentBarsPatternInput" min="1" max="8" value="2" class="pattern-number">
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="silent-status" id="silentStatus"></div>
+                        </div>
                     </div>
                 </div>
             </section>
