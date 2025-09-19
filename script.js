@@ -513,6 +513,11 @@ class UIController {
             });
         });
         
+        // Theme toggle
+        document.getElementById('themeToggle').addEventListener('change', (e) => {
+            this.toggleTheme(e.target.checked);
+        });
+        
         // Counter reset
         document.getElementById('counterResetBtn').addEventListener('click', () => {
             this.core.resetCounters();
@@ -1018,6 +1023,29 @@ Other:
         localStorage.setItem('metronome-tempo', this.core.tempo.toString());
         localStorage.setItem('metronome-beats', this.core.beatsPerBar.toString());
     }
+    
+    toggleTheme(isDarkMode) {
+        if (isDarkMode) {
+            document.body.classList.add('dark-mode');
+            localStorage.setItem('metronome-theme', 'dark');
+        } else {
+            document.body.classList.remove('dark-mode');
+            localStorage.setItem('metronome-theme', 'light');
+        }
+    }
+    
+    loadTheme() {
+        const savedTheme = localStorage.getItem('metronome-theme');
+        const themeToggle = document.getElementById('themeToggle');
+        
+        if (savedTheme === 'dark') {
+            document.body.classList.add('dark-mode');
+            if (themeToggle) themeToggle.checked = true;
+        } else {
+            document.body.classList.remove('dark-mode');
+            if (themeToggle) themeToggle.checked = false;
+        }
+    }
 }
 
 // Initialize the application
@@ -1029,6 +1057,9 @@ document.addEventListener('DOMContentLoaded', async () => {
         
         // Create UI controller
         const uiController = new UIController(metronomeCore);
+        
+        // Load saved theme
+        uiController.loadTheme();
         
         // Make available globally for debugging
         window.metronome = metronomeCore;

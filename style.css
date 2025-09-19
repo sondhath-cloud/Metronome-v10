@@ -55,15 +55,16 @@ body {
 
 /* Main Metronome Display (Advanced) */
 .metronome-display {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    background: white;
     border-radius: 20px;
     padding: 40px;
     margin-bottom: 30px;
     text-align: center;
-    color: white;
+    color: #333;
     box-shadow: 0 10px 30px rgba(0,0,0,0.2);
     cursor: pointer;
     transition: all 0.3s ease;
+    border: 2px solid #ddd;
 }
 
 .metronome-display:hover {
@@ -172,11 +173,13 @@ body {
 
 .tempo-display {
     font-size: 1.5rem;
+    color: #333;
 }
 
 .tempo-value {
     font-size: 2rem;
     font-weight: 500;
+    color: #333;
 }
 
 /* Advanced Controls Section */
@@ -490,6 +493,27 @@ body {
     border-color: #4CAF50;
 }
 
+.theme-toggle {
+    margin-top: 15px;
+    text-align: center;
+}
+
+.theme-toggle-label {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    color: #333;
+}
+
+.theme-toggle-checkbox {
+    margin: 0;
+    width: 18px;
+    height: 18px;
+}
+
 /* Combined Sound, Counter, and Silent Pattern Controls */
 .sound-counter-silent-controls {
     display: flex;
@@ -725,4 +749,102 @@ body {
         opacity: 1;
         transform: translateY(0);
     }
+}
+
+/* Dark Mode Styles */
+body.dark-mode {
+    background-color: #1a1a1a;
+    color: #e0e0e0;
+}
+
+body.dark-mode .app-header h1 {
+    color: #e0e0e0;
+}
+
+body.dark-mode .metronome-display {
+    background: #2d2d2d;
+    color: #e0e0e0;
+    border-color: #444;
+}
+
+body.dark-mode .tempo-display,
+body.dark-mode .tempo-value {
+    color: #e0e0e0;
+}
+
+body.dark-mode .control-tile {
+    background: #2d2d2d;
+    border-color: #444;
+}
+
+body.dark-mode .control-tile h3 {
+    color: #e0e0e0;
+}
+
+body.dark-mode .tempo-btn,
+body.dark-mode .subdivision-btn,
+body.dark-mode .display-btn,
+body.dark-mode .preset-btn,
+body.dark-mode .mode-btn,
+body.dark-mode .tap-tempo-btn,
+body.dark-mode .counter-reset-btn {
+    background-color: #3d3d3d;
+    border-color: #555;
+    color: #e0e0e0;
+}
+
+body.dark-mode .tempo-btn:hover,
+body.dark-mode .subdivision-btn:hover,
+body.dark-mode .display-btn:hover,
+body.dark-mode .preset-btn:hover,
+body.dark-mode .mode-btn:hover,
+body.dark-mode .tap-tempo-btn:hover,
+body.dark-mode .counter-reset-btn:hover {
+    background-color: #4d4d4d;
+}
+
+body.dark-mode .subdivision-btn.active,
+body.dark-mode .display-btn.active,
+body.dark-mode .mode-btn.active {
+    background-color: #4CAF50;
+    color: white;
+    border-color: #4CAF50;
+}
+
+body.dark-mode .time-signature-select {
+    background-color: #3d3d3d;
+    border-color: #555;
+    color: #e0e0e0;
+}
+
+body.dark-mode .emphasis-label,
+body.dark-mode .theme-toggle-text,
+body.dark-mode .counter-label {
+    color: #e0e0e0;
+}
+
+body.dark-mode .counter-value {
+    color: #e0e0e0;
+}
+
+body.dark-mode .pattern-number {
+    background-color: #3d3d3d;
+    border-color: #555;
+    color: #e0e0e0;
+}
+
+body.dark-mode .voice-btn,
+body.dark-mode .voice-help-btn {
+    background-color: #3d3d3d;
+    border-color: #555;
+    color: #e0e0e0;
+}
+
+body.dark-mode .voice-btn:hover,
+body.dark-mode .voice-help-btn:hover {
+    background-color: #4d4d4d;
+}
+
+body.dark-mode .theme-toggle-text {
+    color: #e0e0e0;
 }
