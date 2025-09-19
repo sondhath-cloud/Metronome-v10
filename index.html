@@ -35,10 +35,10 @@
 
             <!-- Advanced Controls Section -->
             <section class="controls-section" id="controlsSection">
-                <!-- Tempo and Time Signature Controls -->
-                <div class="control-tile" data-tile-id="tempo-and-signature">
+                <!-- Tempo, Time Signature, and Voice Controls -->
+                <div class="control-tile" data-tile-id="tempo-signature-voice">
                     <div class="drag-handle"></div>
-                    <div class="tempo-and-signature-controls">
+                    <div class="tempo-signature-voice-controls">
                         <div class="tempo-section">
                             <h3>Tempo</h3>
                             <div class="tempo-buttons">
@@ -65,6 +65,18 @@
                                 <option value="3/8">3/8</option>
                                 <option value="6/4">6/4</option>
                             </select>
+                        </div>
+                        <div class="voice-section">
+                            <h3>Voice Commands</h3>
+                            <div class="voice-controls">
+                                <div class="voice-indicator" id="voiceIndicator">
+                                    <div class="indicator-dot"></div>
+                                    <span class="indicator-text">Voice Active</span>
+                                </div>
+                                <button class="voice-btn" id="voiceToggle">Voice Commands</button>
+                                <button class="voice-help-btn" id="voiceHelpBtn">Help</button>
+                                <div class="voice-status" id="voiceStatus"></div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -119,20 +131,6 @@
                     </div>
                 </div>
 
-                <!-- Voice Commands -->
-                <div class="control-tile" data-tile-id="voice">
-                    <div class="drag-handle"></div>
-                    <div class="voice-controls">
-                        <div class="voice-indicator" id="voiceIndicator">
-                            <div class="indicator-dot"></div>
-                            <span class="indicator-text">Voice Active</span>
-                        </div>
-                        <button class="voice-btn" id="voiceToggle">Voice Commands</button>
-                        <button class="voice-help-btn" id="voiceHelpBtn">Help</button>
-                        <div class="voice-status" id="voiceStatus"></div>
-                    </div>
-                </div>
-                
                 <!-- Bar Counter -->
                 <div class="control-tile" data-tile-id="bar-counter">
                     <div class="drag-handle"></div>

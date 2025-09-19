@@ -218,21 +218,21 @@ body {
 }
 
 /* Advanced Control Styles */
-.tempo-and-signature-controls {
+.tempo-signature-voice-controls {
     display: flex;
-    gap: 30px;
-    align-items: flex-start;
-    justify-content: space-between;
+    flex-direction: column;
+    gap: 25px;
 }
 
 .tempo-section,
-.time-signature-section {
-    flex: 1;
+.time-signature-section,
+.voice-section {
     text-align: center;
 }
 
 .tempo-section h3,
-.time-signature-section h3 {
+.time-signature-section h3,
+.voice-section h3 {
     margin-bottom: 15px;
     color: #333;
     font-size: 1.1rem;
@@ -576,9 +576,8 @@ body {
         flex-direction: column;
     }
     
-    /* Combined tempo and signature container responsive */
-    .tempo-and-signature-controls {
-        flex-direction: column;
+    /* Combined tempo, signature, and voice container responsive */
+    .tempo-signature-voice-controls {
         gap: 20px;
     }
     
