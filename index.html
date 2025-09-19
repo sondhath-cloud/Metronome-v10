@@ -148,6 +148,64 @@
                     </div>
                 </div>
 
+                <!-- Microphone Input Controls -->
+                <div class="control-tile" data-tile-id="microphone-input">
+                    <div class="drag-handle"></div>
+                    <div class="microphone-input-controls">
+                        <div class="microphone-section">
+                            <h3>Microphone Tempo Detection</h3>
+                            <div class="microphone-status" id="microphoneStatus">
+                                <div class="status-indicator" id="microphoneIndicator">
+                                    <div class="indicator-dot"></div>
+                                    <span class="indicator-text">Microphone Ready</span>
+                                </div>
+                                <div class="detected-tempo" id="detectedTempo">
+                                    <span class="tempo-label">Detected:</span>
+                                    <span class="tempo-value" id="detectedTempoValue">--</span>
+                                    <span class="tempo-label">BPM</span>
+                                </div>
+                                <div class="confidence-display" id="confidenceDisplay">
+                                    <span class="confidence-label">Confidence:</span>
+                                    <span class="confidence-value" id="confidenceValue">--</span>
+                                    <span class="confidence-label">%</span>
+                                </div>
+                                <div class="volume-display" id="volumeDisplay">
+                                    <span class="volume-label">Volume:</span>
+                                    <div class="volume-bar">
+                                        <div class="volume-fill" id="volumeFill"></div>
+                                    </div>
+                                    <span class="volume-value" id="volumeValue">--</span>
+                                </div>
+                            </div>
+                            <div class="microphone-controls">
+                                <button class="microphone-btn" id="microphoneToggle">Start Listening</button>
+                                <button class="microphone-reset-btn" id="microphoneReset">Reset</button>
+                            </div>
+                            <div class="sensitivity-controls">
+                                <h4>Sensitivity Settings</h4>
+                                <div class="sensitivity-slider-container">
+                                    <label for="sensitivitySlider">Sensitivity:</label>
+                                    <input type="range" id="sensitivitySlider" min="0" max="100" value="90" class="sensitivity-slider">
+                                    <span class="sensitivity-value" id="sensitivityValue">90%</span>
+                                </div>
+                                <div class="interval-controls">
+                                    <div class="interval-control">
+                                        <label for="minIntervalInput">Min Beat Interval (ms):</label>
+                                        <input type="number" id="minIntervalInput" min="100" max="1000" value="200" class="interval-input">
+                                    </div>
+                                    <div class="interval-control">
+                                        <label for="maxIntervalInput">Max Beat Interval (ms):</label>
+                                        <input type="number" id="maxIntervalInput" min="500" max="5000" value="2000" class="interval-input">
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="microphone-help">
+                                <button class="microphone-help-btn" id="microphoneHelpBtn">Help</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
                 <!-- Sound, Counter, and Silent Pattern Controls -->
                 <div class="control-tile" data-tile-id="sound-counter-silent">
                     <div class="drag-handle"></div>
@@ -223,6 +281,7 @@
     </div>
 
     <script src="audio-manager.js"></script>
+    <script src="microphone-input.js"></script>
     <script src="script.js"></script>
 </body>
 </html>

@@ -47,12 +47,17 @@ class MetronomeCore {
         this.isVoiceEnabled = false;
         this.voiceSynthesis = null;
         
+        // Microphone input
+        this.microphoneInput = null;
+        this.isMicrophoneEnabled = false;
+        
         // Display
         this.displayMode = 'circle';
     }
     
     async init() {
         await this.setupAudioManager();
+        await this.setupMicrophoneInput();
         console.log('MetronomeCore initialized');
     }
     
@@ -60,6 +65,44 @@ class MetronomeCore {
         this.audioManager = new AudioManager();
         await this.audioManager.init();
         console.log('Audio system ready:', this.audioManager.getAudioStatus());
+    }
+    
+    async setupMicrophoneInput() {
+        this.microphoneInput = new MicrophoneInput();
+        const success = await this.microphoneInput.init();
+        
+        if (success) {
+            // Set up callbacks
+            this.microphoneInput.onBeatDetected = (timestamp) => {
+                console.log('Beat detected at:', new Date(timestamp).toLocaleTimeString());
+            };
+            
+            this.microphoneInput.onTempoDetected = (tempo, confidence) => {
+                console.log(`Tempo detected: ${tempo} BPM (confidence: ${confidence.toFixed(1)}%)`);
+                // Update UI through callback if available
+                if (this.onTempoDetected) {
+                    this.onTempoDetected(tempo, confidence);
+                }
+            };
+            
+            this.microphoneInput.onVolumeUpdate = (volume) => {
+                // Update UI through callback if available
+                if (this.onVolumeUpdate) {
+                    this.onVolumeUpdate(volume);
+                }
+            };
+            
+            this.microphoneInput.onError = (error) => {
+                console.error('Microphone error:', error);
+                if (this.onMicrophoneError) {
+                    this.onMicrophoneError(error);
+                }
+            };
+            
+            console.log('Microphone input ready');
+        } else {
+            console.warn('Microphone input not available');
+        }
     }
     
     // Core timing methods
@@ -380,6 +423,73 @@ class MetronomeCore {
         this.barCount = 0;
         this.beatCount = 0;
     }
+    
+    // Microphone input methods
+    startMicrophoneListening() {
+        if (this.microphoneInput && this.microphoneInput.isInitialized) {
+            this.isMicrophoneEnabled = true;
+            this.microphoneInput.startListening();
+            console.log('Started microphone listening');
+            return true;
+        }
+        return false;
+    }
+    
+    stopMicrophoneListening() {
+        if (this.microphoneInput) {
+            this.isMicrophoneEnabled = false;
+            this.microphoneInput.stopListening();
+            console.log('Stopped microphone listening');
+        }
+    }
+    
+    toggleMicrophoneListening() {
+        if (this.isMicrophoneEnabled) {
+            this.stopMicrophoneListening();
+        } else {
+            this.startMicrophoneListening();
+        }
+    }
+    
+    setMicrophoneSensitivity(sensitivity) {
+        if (this.microphoneInput) {
+            this.microphoneInput.setSensitivity(sensitivity);
+        }
+    }
+    
+    setMicrophoneMinInterval(interval) {
+        if (this.microphoneInput) {
+            this.microphoneInput.setMinBeatInterval(interval);
+        }
+    }
+    
+    setMicrophoneMaxInterval(interval) {
+        if (this.microphoneInput) {
+            this.microphoneInput.setMaxBeatInterval(interval);
+        }
+    }
+    
+    resetMicrophoneDetection() {
+        if (this.microphoneInput) {
+            this.microphoneInput.reset();
+        }
+    }
+    
+    getMicrophoneStatus() {
+        if (this.microphoneInput) {
+            return this.microphoneInput.getStatus();
+        }
+        return null;
+    }
+    
+    applyDetectedTempo(tempo) {
+        if (tempo >= 30 && tempo <= 300) {
+            this.setTempo(tempo);
+            console.log(`Applied detected tempo: ${tempo} BPM`);
+            return true;
+        }
+        return false;
+    }
 }
 
 class UIController {
@@ -405,6 +515,19 @@ class UIController {
         // Set up beat change callback
         this.core.onBeatChange = () => {
             this.updateDisplay();
+        };
+        
+        // Set up microphone callbacks
+        this.core.onTempoDetected = (tempo, confidence) => {
+            this.updateMicrophoneDisplay(tempo, confidence);
+        };
+        
+        this.core.onMicrophoneError = (error) => {
+            this.showMicrophoneError(error);
+        };
+        
+        this.core.onVolumeUpdate = (volume) => {
+            this.updateVolumeDisplay(volume);
         };
         
         this.updateDisplay();
@@ -559,6 +682,9 @@ class UIController {
             this.core.silentBarsPattern = parseInt(e.target.value);
             this.core.resetPattern();
         });
+        
+        // Microphone input controls
+        this.setupMicrophoneControls();
     }
     
     setupSharedControls() {
@@ -1045,6 +1171,216 @@ Other:
             document.body.classList.remove('dark-mode');
             if (themeToggle) themeToggle.checked = false;
         }
+    }
+    
+    setupMicrophoneControls() {
+        // Microphone toggle button
+        document.getElementById('microphoneToggle').addEventListener('click', () => {
+            this.toggleMicrophoneListening();
+        });
+        
+        // Microphone reset button
+        document.getElementById('microphoneReset').addEventListener('click', () => {
+            this.resetMicrophoneDetection();
+        });
+        
+        // Sensitivity slider
+        const sensitivitySlider = document.getElementById('sensitivitySlider');
+        const sensitivityValue = document.getElementById('sensitivityValue');
+        
+        sensitivitySlider.addEventListener('input', (e) => {
+            const value = parseInt(e.target.value);
+            sensitivityValue.textContent = value + '%';
+            this.core.setMicrophoneSensitivity(value);
+        });
+        
+        // Min interval input
+        document.getElementById('minIntervalInput').addEventListener('change', (e) => {
+            const value = parseInt(e.target.value);
+            this.core.setMicrophoneMinInterval(value);
+        });
+        
+        // Max interval input
+        document.getElementById('maxIntervalInput').addEventListener('change', (e) => {
+            const value = parseInt(e.target.value);
+            this.core.setMicrophoneMaxInterval(value);
+        });
+        
+        // Microphone help button
+        document.getElementById('microphoneHelpBtn').addEventListener('click', () => {
+            this.showMicrophoneHelp();
+        });
+        
+        
+        // Click to apply detected tempo
+        document.getElementById('detectedTempoValue').addEventListener('click', () => {
+            this.applyDetectedTempo();
+        });
+        
+        // Initialize microphone display
+        this.updateMicrophoneStatus();
+    }
+    
+    toggleMicrophoneListening() {
+        if (this.core.isMicrophoneEnabled) {
+            this.core.stopMicrophoneListening();
+            this.updateMicrophoneStatus();
+        } else {
+            console.log('Attempting to start microphone listening...');
+            const success = this.core.startMicrophoneListening();
+            if (success) {
+                console.log('Microphone listening started successfully');
+                this.updateMicrophoneStatus();
+            } else {
+                console.error('Failed to start microphone listening');
+                this.showMicrophoneError('Failed to start microphone listening. Please check microphone permissions.');
+            }
+        }
+    }
+    
+    resetMicrophoneDetection() {
+        this.core.resetMicrophoneDetection();
+        this.updateMicrophoneDisplay('--', '--');
+        console.log('Microphone detection reset');
+    }
+    
+    updateMicrophoneStatus() {
+        const status = this.core.getMicrophoneStatus();
+        const indicator = document.getElementById('microphoneIndicator');
+        const toggleBtn = document.getElementById('microphoneToggle');
+        
+        if (status && status.isInitialized) {
+            if (status.isListening) {
+                indicator.classList.add('active');
+                toggleBtn.textContent = 'Stop Listening';
+                toggleBtn.classList.add('listening');
+            } else {
+                indicator.classList.remove('active');
+                toggleBtn.textContent = 'Start Listening';
+                toggleBtn.classList.remove('listening');
+            }
+        } else {
+            indicator.classList.remove('active');
+            toggleBtn.textContent = 'Microphone Not Available';
+            toggleBtn.disabled = true;
+        }
+    }
+    
+    updateMicrophoneDisplay(tempo, confidence) {
+        const tempoValue = document.getElementById('detectedTempoValue');
+        const confidenceValue = document.getElementById('confidenceValue');
+        
+        if (tempoValue) tempoValue.textContent = tempo;
+        if (confidenceValue) confidenceValue.textContent = confidence;
+        
+        // Update status indicator to show activity
+        const indicator = document.getElementById('microphoneIndicator');
+        if (indicator) {
+            indicator.classList.add('active');
+            setTimeout(() => {
+                if (!this.core.isMicrophoneEnabled) {
+                    indicator.classList.remove('active');
+                }
+            }, 200);
+        }
+    }
+    
+    updateVolumeDisplay(volume) {
+        const volumeFill = document.getElementById('volumeFill');
+        const volumeValue = document.getElementById('volumeValue');
+        
+        if (volumeFill) {
+            const percentage = Math.min(100, volume * 100);
+            volumeFill.style.width = percentage + '%';
+        }
+        
+        if (volumeValue) {
+            volumeValue.textContent = (volume * 100).toFixed(1) + '%';
+        }
+    }
+    
+    showMicrophoneError(error) {
+        console.error('Microphone error:', error);
+        alert(`Microphone Error: ${error}`);
+        
+        // Update UI to show error state
+        const indicator = document.getElementById('microphoneIndicator');
+        const toggleBtn = document.getElementById('microphoneToggle');
+        
+        if (indicator) {
+            indicator.classList.remove('active');
+        }
+        if (toggleBtn) {
+            toggleBtn.textContent = 'Microphone Error';
+            toggleBtn.disabled = true;
+        }
+    }
+    
+    applyDetectedTempo() {
+        const status = this.core.getMicrophoneStatus();
+        if (status && status.detectedTempo && status.detectedTempo !== 120) {
+            const success = this.core.applyDetectedTempo(status.detectedTempo);
+            if (success) {
+                this.updateDisplay();
+                console.log(`Applied detected tempo: ${status.detectedTempo} BPM`);
+                
+                // Show confirmation
+                const tempoValue = document.getElementById('detectedTempoValue');
+                if (tempoValue) {
+                    const originalText = tempoValue.textContent;
+                    tempoValue.textContent = 'Applied!';
+                    tempoValue.style.color = '#4CAF50';
+                    setTimeout(() => {
+                        tempoValue.textContent = originalText;
+                        tempoValue.style.color = '';
+                    }, 1000);
+                }
+            }
+        } else {
+            alert('No valid tempo detected yet. Please start listening and provide audio input.');
+        }
+    }
+    
+    
+    showMicrophoneHelp() {
+        const helpText = `Microphone Tempo Detection Help:
+
+How it works:
+• Click "Start Listening" to begin detecting beats
+• Clap, tap, or play music near your microphone
+• The system will analyze the audio and detect tempo
+• Detected tempo and confidence will be displayed
+
+Sensitivity Settings:
+• Sensitivity: Higher = more sensitive (detects quieter sounds)
+• Min Beat Interval: Prevents detecting beats too close together
+  - 200ms = max 300 BPM (default, good for most music)
+  - 100ms = max 600 BPM (for very fast music)
+  - 500ms = max 120 BPM (for slow music)
+• Max Beat Interval: Ignores beats too far apart
+  - 2000ms = min 30 BPM (default, good for most music)
+  - 1000ms = min 60 BPM (for faster music)
+  - 5000ms = min 12 BPM (for very slow music)
+
+Troubleshooting:
+• Check browser console for debug information
+• Ensure microphone permissions are granted
+• Try adjusting sensitivity settings
+
+Tips for best results:
+• Use a clear, consistent beat source
+• Adjust sensitivity if detecting too many/few beats
+• For loud music: lower sensitivity (50-70%)
+• For quiet sounds: higher sensitivity (80-100%)
+• For fast music: lower Min Beat Interval (100-150ms)
+• For slow music: higher Min Beat Interval (300-500ms)
+• For noisy environments: higher Min Beat Interval (300-400ms)
+• Higher confidence means more consistent tempo detection
+• Click "Reset" to clear detection history
+
+The detected tempo can be applied to your metronome by clicking the detected tempo value.`;
+        
+        alert(helpText);
     }
 }
 

@@ -514,6 +514,252 @@ body {
     height: 18px;
 }
 
+/* Microphone Input Controls */
+.microphone-input-controls {
+    display: flex;
+    flex-direction: column;
+    gap: 25px;
+}
+
+.microphone-section {
+    text-align: center;
+}
+
+.microphone-section h3 {
+    margin-bottom: 15px;
+    color: #333;
+    font-size: 1.1rem;
+    font-weight: 500;
+}
+
+.microphone-status {
+    margin-bottom: 20px;
+    padding: 15px;
+    background-color: #f8f9fa;
+    border-radius: 8px;
+    border: 1px solid #e9ecef;
+}
+
+.status-indicator {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    margin-bottom: 10px;
+}
+
+.status-indicator .indicator-dot {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background-color: #ddd;
+    transition: background-color 0.3s ease;
+}
+
+.status-indicator.active .indicator-dot {
+    background-color: #4CAF50;
+    animation: pulse 1.5s infinite;
+}
+
+.detected-tempo, .confidence-display, .volume-display {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+    margin-bottom: 8px;
+}
+
+.volume-display {
+    flex-direction: column;
+    gap: 8px;
+}
+
+.volume-bar {
+    width: 200px;
+    height: 8px;
+    background-color: #e0e0e0;
+    border-radius: 4px;
+    overflow: hidden;
+    position: relative;
+}
+
+.volume-fill {
+    height: 100%;
+    background-color: #4CAF50;
+    width: 0%;
+    transition: width 0.1s ease;
+    border-radius: 4px;
+}
+
+.volume-value {
+    font-size: 0.8rem;
+    color: #666;
+    font-weight: bold;
+}
+
+.tempo-label, .confidence-label {
+    font-size: 0.9rem;
+    color: #666;
+}
+
+.tempo-value, .confidence-value {
+    font-weight: bold;
+    color: #4CAF50;
+    font-size: 1.1rem;
+}
+
+.detected-tempo .tempo-value {
+    cursor: pointer;
+    padding: 2px 6px;
+    border-radius: 4px;
+    transition: all 0.2s ease;
+}
+
+.detected-tempo .tempo-value:hover {
+    background-color: rgba(76, 175, 80, 0.1);
+    transform: scale(1.05);
+}
+
+.microphone-controls {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 20px;
+}
+
+.microphone-btn, .microphone-reset-btn {
+    flex: 1;
+    padding: 10px 16px;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-size: 0.9rem;
+}
+
+.microphone-btn {
+    background-color: #4CAF50;
+    color: white;
+}
+
+.microphone-btn:hover {
+    background-color: #45a049;
+}
+
+.microphone-btn.listening {
+    background-color: #ff5722;
+}
+
+.microphone-btn.listening:hover {
+    background-color: #e64a19;
+}
+
+.microphone-reset-btn {
+    background-color: #f0f0f0;
+    color: #666;
+}
+
+.microphone-reset-btn:hover {
+    background-color: #e0e0e0;
+}
+
+.sensitivity-controls h4 {
+    margin-bottom: 15px;
+    color: #333;
+    font-size: 1rem;
+    font-weight: 500;
+}
+
+.sensitivity-slider-container {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 15px;
+}
+
+.sensitivity-slider-container label {
+    font-size: 0.9rem;
+    color: #666;
+    min-width: 120px;
+}
+
+.sensitivity-slider {
+    flex: 1;
+    height: 6px;
+    border-radius: 3px;
+    background: #ddd;
+    outline: none;
+    -webkit-appearance: none;
+}
+
+.sensitivity-slider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: #4CAF50;
+    cursor: pointer;
+}
+
+.sensitivity-slider::-moz-range-thumb {
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: #4CAF50;
+    cursor: pointer;
+    border: none;
+}
+
+.sensitivity-value {
+    font-weight: bold;
+    color: #4CAF50;
+    min-width: 40px;
+    text-align: right;
+}
+
+.interval-controls {
+    display: flex;
+    gap: 15px;
+}
+
+.interval-control {
+    flex: 1;
+}
+
+.interval-control label {
+    display: block;
+    margin-bottom: 5px;
+    font-size: 0.8rem;
+    color: #666;
+}
+
+.interval-input {
+    width: 100%;
+    padding: 6px 8px;
+    border: 2px solid #ddd;
+    border-radius: 4px;
+    font-size: 0.9rem;
+}
+
+.microphone-help {
+    margin-top: 15px;
+}
+
+.microphone-help-btn {
+    padding: 6px 12px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    background-color: #f8f9fa;
+    color: #666;
+    cursor: pointer;
+    font-size: 0.8rem;
+    transition: all 0.2s ease;
+}
+
+.microphone-help-btn:hover {
+    background-color: #e9ecef;
+}
+
 /* Combined Sound, Counter, and Silent Pattern Controls */
 .sound-counter-silent-controls {
     display: flex;
@@ -847,4 +1093,83 @@ body.dark-mode .voice-help-btn:hover {
 
 body.dark-mode .theme-toggle-text {
     color: #e0e0e0;
+}
+
+/* Dark mode styles for microphone controls */
+body.dark-mode .microphone-section h3,
+body.dark-mode .sensitivity-controls h4 {
+    color: #e0e0e0;
+}
+
+body.dark-mode .microphone-status {
+    background-color: #3d3d3d;
+    border-color: #555;
+}
+
+body.dark-mode .tempo-label,
+body.dark-mode .confidence-label {
+    color: #b0b0b0;
+}
+
+body.dark-mode .microphone-reset-btn,
+body.dark-mode .microphone-help-btn {
+    background-color: #3d3d3d;
+    border-color: #555;
+    color: #e0e0e0;
+}
+
+body.dark-mode .microphone-reset-btn:hover,
+body.dark-mode .microphone-help-btn:hover {
+    background-color: #4d4d4d;
+}
+
+body.dark-mode .sensitivity-slider-container label,
+body.dark-mode .interval-control label {
+    color: #b0b0b0;
+}
+
+body.dark-mode .sensitivity-slider {
+    background: #555;
+}
+
+body.dark-mode .interval-input {
+    background-color: #3d3d3d;
+    border-color: #555;
+    color: #e0e0e0;
+}
+
+/* Responsive design for microphone controls */
+@media (max-width: 768px) {
+    .microphone-status {
+        padding: 10px;
+    }
+    
+    .detected-tempo, .confidence-display {
+        flex-direction: column;
+        gap: 2px;
+    }
+    
+    .microphone-controls {
+        flex-direction: column;
+    }
+    
+    .sensitivity-slider-container {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 5px;
+    }
+    
+    .sensitivity-slider-container label {
+        min-width: auto;
+    }
+    
+    .interval-controls {
+        flex-direction: column;
+        gap: 10px;
+    }
+    
+    .detected-tempo .tempo-value {
+        font-size: 1.2rem;
+        padding: 4px 8px;
+    }
 }
