@@ -65,6 +65,7 @@ body {
     cursor: pointer;
     transition: all 0.3s ease;
     border: 2px solid #ddd;
+    position: relative;
 }
 
 .metronome-display:hover {
@@ -174,12 +175,123 @@ body {
 .tempo-display {
     font-size: 1.5rem;
     color: #333;
+    margin-bottom: 20px;
+}
+
+.tempo-controls-display {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 15px;
+    margin-bottom: 20px;
+}
+
+.tempo-controls-display .tempo-display {
+    background: transparent;
+    border: none;
+    padding: 0;
+    margin: 0;
+}
+
+.tempo-btn-display {
+    padding: 8px 16px;
+    border: 2px solid #ddd;
+    border-radius: 8px;
+    background: white;
+    color: #333;
+    font-size: 1rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.tempo-btn-display:hover {
+    background: #f0f0f0;
+    border-color: #999;
+}
+
+.tempo-btn-display:active {
+    transform: scale(0.95);
 }
 
 .tempo-value {
     font-size: 2rem;
     font-weight: 500;
     color: #333;
+}
+
+
+.metronome-controls {
+    position: absolute;
+    bottom: 20px;
+    left: 20px;
+    right: 20px;
+    z-index: 10;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.metronome-tap-tempo-btn,
+.metronome-countin-btn {
+    padding: 12px 24px;
+    border: none;
+    border-radius: 8px;
+    font-size: 1rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    min-width: 140px;
+}
+
+.metronome-start-btn {
+    background-color: #4CAF50;
+    color: white;
+}
+
+.metronome-start-btn:hover {
+    background-color: #45a049;
+    transform: translateY(-2px);
+}
+
+.metronome-start-btn:active {
+    transform: translateY(0);
+}
+
+.metronome-tap-tempo-btn {
+    background-color: #ff9800;
+    color: white;
+}
+
+.metronome-tap-tempo-btn:hover {
+    background-color: #f57c00;
+    transform: translateY(-2px);
+}
+
+.metronome-tap-tempo-btn:active {
+    transform: translateY(0);
+}
+
+.metronome-countin-btn {
+    background-color: #ff9800;
+    color: white;
+}
+
+.metronome-countin-btn:hover {
+    background-color: #f57c00;
+    transform: translateY(-2px);
+}
+
+.metronome-countin-btn:active {
+    transform: translateY(0);
+}
+
+.metronome-start-btn.stopped, .metronome-countin-btn.stopped, .metronome-tap-tempo-btn.stopped {
+    background-color: #f44336;
+}
+
+.metronome-start-btn.stopped:hover, .metronome-countin-btn.stopped:hover, .metronome-tap-tempo-btn.stopped:hover {
+    background-color: #d32f2f;
 }
 
 /* Advanced Controls Section */
@@ -221,19 +333,11 @@ body {
 }
 
 /* Advanced Control Styles */
-.tempo-signature-voice-controls {
-    display: flex;
-    flex-direction: column;
-    gap: 25px;
-}
-
-.tempo-section,
 .time-signature-section,
 .voice-section {
     text-align: center;
 }
 
-.tempo-section h3,
 .time-signature-section h3,
 .voice-section h3 {
     margin-bottom: 15px;
@@ -242,36 +346,6 @@ body {
     font-weight: 500;
 }
 
-.tempo-controls {
-    text-align: center;
-}
-
-.tempo-buttons {
-    display: flex;
-    gap: 10px;
-    margin-bottom: 15px;
-}
-
-.tempo-buttons .tempo-btn {
-    flex: 1;
-    height: 40px;
-    font-size: 0.9rem;
-}
-
-.tap-tempo-btn {
-    padding: 10px 20px;
-    border: none;
-    border-radius: 6px;
-    background-color: #4CAF50;
-    color: white;
-    cursor: pointer;
-    transition: all 0.2s ease;
-}
-
-.tap-tempo-btn:hover {
-    background-color: #45a049;
-    transform: translateY(-1px);
-}
 
 .time-signature-select {
     width: 100%;
@@ -280,6 +354,7 @@ body {
     border-radius: 6px;
     font-size: 1rem;
     background-color: white;
+    margin-bottom: 20px;
 }
 
 .subdivision-section h3 {
@@ -519,6 +594,30 @@ body {
     display: flex;
     flex-direction: column;
     gap: 25px;
+}
+
+.tap-tempo-section {
+    padding: 15px;
+    background: #f8f9fa;
+    border-radius: 8px;
+    border: 1px solid #e9ecef;
+    transition: all 0.3s ease;
+}
+
+.tap-tempo-section h3 {
+    margin: 0 0 10px 0;
+    font-size: 1rem;
+    color: #333;
+}
+
+/* Dark mode styles for tap tempo section */
+body.dark-mode .tap-tempo-section {
+    background: #2d2d2d;
+    border-color: #444;
+}
+
+body.dark-mode .tap-tempo-section h3 {
+    color: #e0e0e0;
 }
 
 .microphone-section {
@@ -1013,7 +1112,22 @@ body.dark-mode .metronome-display {
     border-color: #444;
 }
 
-body.dark-mode .tempo-display,
+body.dark-mode .tempo-controls-display .tempo-btn-display {
+    background: #3d3d3d;
+    border-color: #555;
+    color: #e0e0e0;
+}
+
+body.dark-mode .tempo-controls-display .tempo-display {
+    background: transparent;
+    border: none;
+}
+
+body.dark-mode .tempo-controls-display .tempo-btn-display:hover {
+    background: #4d4d4d;
+    border-color: #666;
+}
+
 body.dark-mode .tempo-value {
     color: #e0e0e0;
 }
@@ -1027,24 +1141,20 @@ body.dark-mode .control-tile h3 {
     color: #e0e0e0;
 }
 
-body.dark-mode .tempo-btn,
 body.dark-mode .subdivision-btn,
 body.dark-mode .display-btn,
 body.dark-mode .preset-btn,
 body.dark-mode .mode-btn,
-body.dark-mode .tap-tempo-btn,
 body.dark-mode .counter-reset-btn {
     background-color: #3d3d3d;
     border-color: #555;
     color: #e0e0e0;
 }
 
-body.dark-mode .tempo-btn:hover,
 body.dark-mode .subdivision-btn:hover,
 body.dark-mode .display-btn:hover,
 body.dark-mode .preset-btn:hover,
 body.dark-mode .mode-btn:hover,
-body.dark-mode .tap-tempo-btn:hover,
 body.dark-mode .counter-reset-btn:hover {
     background-color: #4d4d4d;
 }
@@ -1138,6 +1248,24 @@ body.dark-mode .interval-input {
     color: #e0e0e0;
 }
 
+body.dark-mode .metronome-start-btn, 
+body.dark-mode .metronome-tap-tempo-btn,
+body.dark-mode .metronome-countin-btn {
+    color: white;
+}
+
+body.dark-mode .metronome-start-btn.stopped, 
+body.dark-mode .metronome-tap-tempo-btn.stopped,
+body.dark-mode .metronome-countin-btn.stopped {
+    background-color: #d32f2f;
+}
+
+body.dark-mode .metronome-start-btn.stopped:hover, 
+body.dark-mode .metronome-tap-tempo-btn.stopped:hover,
+body.dark-mode .metronome-countin-btn.stopped:hover {
+    background-color: #b71c1c;
+}
+
 /* Responsive design for microphone controls */
 @media (max-width: 768px) {
     .microphone-status {
@@ -1171,5 +1299,15 @@ body.dark-mode .interval-input {
     .detected-tempo .tempo-value {
         font-size: 1.2rem;
         padding: 4px 8px;
+    }
+    
+    .metronome-controls {
+        flex-direction: column;
+        gap: 10px;
+    }
+    
+    .metronome-countin-btn {
+        min-width: auto;
+        width: 100%;
     }
 }

@@ -34,6 +34,17 @@ class MicrophoneInput {
     }
     
     async init() {
+        // Don't request microphone permission by default
+        // This will be called when user actually wants to use microphone
+        console.log('Microphone input ready (permission will be requested when needed)');
+        return true;
+    }
+    
+    async requestMicrophoneAccess() {
+        if (this.isInitialized) {
+            return true;
+        }
+        
         try {
             // Request microphone access
             const stream = await navigator.mediaDevices.getUserMedia({ 
@@ -62,11 +73,11 @@ class MicrophoneInput {
             this.dataArray = new Uint8Array(this.bufferLength);
             
             this.isInitialized = true;
-            console.log('Microphone input initialized successfully');
+            console.log('Microphone access granted and initialized successfully');
             
             return true;
         } catch (error) {
-            console.error('Failed to initialize microphone input:', error);
+            console.error('Failed to get microphone access:', error);
             if (this.onError) {
                 this.onError('Microphone access denied or not available');
             }
@@ -74,15 +85,18 @@ class MicrophoneInput {
         }
     }
     
-    startListening() {
-        if (!this.isInitialized) {
-            console.warn('Microphone not initialized');
-            return false;
-        }
-        
+    async startListening() {
         if (this.isListening) {
             console.warn('Already listening');
             return true;
+        }
+        
+        // Request microphone access if not already initialized
+        if (!this.isInitialized) {
+            const success = await this.requestMicrophoneAccess();
+            if (!success) {
+                return false;
+            }
         }
         
         this.isListening = true;

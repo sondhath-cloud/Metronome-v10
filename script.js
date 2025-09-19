@@ -62,6 +62,9 @@ class MetronomeCore {
     }
     
     async init() {
+        // Load saved settings first
+        this.loadSettings();
+        
         await this.setupAudioManager();
         await this.setupMicrophoneInput();
         console.log('MetronomeCore initialized');
@@ -74,43 +77,86 @@ class MetronomeCore {
     }
     
     async setupMicrophoneInput() {
+        // Initialize microphone input but don't request permission by default
         this.microphoneInput = new MicrophoneInput();
-        const success = await this.microphoneInput.init();
+        this.isMicrophoneEnabled = false;
+        console.log('Microphone input ready (permission not requested by default)');
+    }
+    
+    // Settings persistence
+    saveSettings() {
+        const settings = {
+            tempo: this.tempo,
+            timeSignature: this.timeSignature,
+            beatSound: this.beatSound,
+            emphasizedBeats: this.emphasizedBeats,
+            subdivision: this.subdivision,
+            playSubdivisionSounds: this.playSubdivisionSounds,
+            patternMode: this.patternMode,
+            activeBars: this.activeBars,
+            silentBarsPattern: this.silentBarsPattern,
+            mutePatternEnabled: this.mutePatternEnabled,
+            isVoiceEnabled: this.isVoiceEnabled,
+            isMicrophoneEnabled: this.isMicrophoneEnabled,
+            displayMode: this.displayMode
+        };
         
-        if (success) {
-            // Set up callbacks
-            this.microphoneInput.onBeatDetected = (timestamp) => {
-                console.log('Beat detected at:', new Date(timestamp).toLocaleTimeString());
-            };
-            
-            this.microphoneInput.onTempoDetected = (tempo, confidence) => {
-                console.log(`Tempo detected: ${tempo} BPM (confidence: ${confidence.toFixed(1)}%)`);
-                // Update UI through callback if available
-                if (this.onTempoDetected) {
-                    this.onTempoDetected(tempo, confidence);
-                }
-            };
-            
-            this.microphoneInput.onVolumeUpdate = (volume) => {
-                // Update UI through callback if available
-                if (this.onVolumeUpdate) {
-                    this.onVolumeUpdate(volume);
-                }
-            };
-            
-            this.microphoneInput.onError = (error) => {
-                console.error('Microphone error:', error);
-                if (this.onMicrophoneError) {
-                    this.onMicrophoneError(error);
-                }
-            };
-            
-            console.log('Microphone input ready');
-        } else {
-            console.warn('Microphone input not available');
+        // Save to both localStorage (persistent) and sessionStorage (current session)
+        try {
+            localStorage.setItem('metronomeSettings', JSON.stringify(settings));
+            sessionStorage.setItem('metronomeSettings', JSON.stringify(settings));
+            console.log('Settings saved to both localStorage and sessionStorage');
+        } catch (error) {
+            console.warn('Failed to save settings:', error);
         }
     }
     
+    loadSettings() {
+        // Try sessionStorage first (current session), then localStorage (persistent)
+        let saved = null;
+        let source = '';
+        
+        try {
+            saved = sessionStorage.getItem('metronomeSettings');
+            if (saved) {
+                source = 'sessionStorage';
+            } else {
+                saved = localStorage.getItem('metronomeSettings');
+                if (saved) {
+                    source = 'localStorage';
+                }
+            }
+        } catch (error) {
+            console.warn('Failed to access storage:', error);
+            return false;
+        }
+        
+        if (saved) {
+            try {
+                const settings = JSON.parse(saved);
+                this.tempo = settings.tempo || 120;
+                this.timeSignature = settings.timeSignature || { numerator: 4, denominator: 4 };
+                this.beatSound = settings.beatSound || 'classic';
+                this.emphasizedBeats = settings.emphasizedBeats || [1];
+                this.subdivision = settings.subdivision || 'quarter';
+                this.playSubdivisionSounds = settings.playSubdivisionSounds || false;
+                this.patternMode = settings.patternMode || 'none';
+                this.activeBars = settings.activeBars || 2;
+                this.silentBarsPattern = settings.silentBarsPattern || 2;
+                this.mutePatternEnabled = settings.mutePatternEnabled || false;
+                this.isVoiceEnabled = settings.isVoiceEnabled || false;
+                this.isMicrophoneEnabled = settings.isMicrophoneEnabled || false;
+                this.displayMode = settings.displayMode || 'circle';
+                
+                console.log(`Settings loaded from ${source}`);
+                return true;
+            } catch (error) {
+                console.warn('Failed to parse settings:', error);
+            }
+        }
+        return false;
+    }
+
     // Core timing methods
     start() {
         if (this.isPlaying) return;
@@ -431,12 +477,14 @@ class MetronomeCore {
     }
     
     // Microphone input methods
-    startMicrophoneListening() {
-        if (this.microphoneInput && this.microphoneInput.isInitialized) {
-            this.isMicrophoneEnabled = true;
-            this.microphoneInput.startListening();
-            console.log('Started microphone listening');
-            return true;
+    async startMicrophoneListening() {
+        if (this.microphoneInput) {
+            const success = await this.microphoneInput.startListening();
+            if (success) {
+                this.isMicrophoneEnabled = true;
+                console.log('Started microphone listening');
+                return true;
+            }
         }
         return false;
     }
@@ -627,7 +675,10 @@ class UIController {
         };
         
         this.updateDisplay();
-        this.updatePresetButtonText();
+        
+        // Ensure time signature is properly initialized to 4/4
+        this.core.setTimeSignature('4/4');
+        this.updateDisplay();
         
         console.log('UIController initialized in advanced mode');
     }
@@ -651,30 +702,38 @@ class UIController {
         // Initialize display mode and beat generation
         this.updateDisplayMode();
         
-        // Tempo controls
-        document.getElementById('tempoMinus10').addEventListener('click', () => {
+        // Load and apply saved settings to UI
+        this.loadSettingsToUI();
+        
+        // Tempo controls (display)
+        document.getElementById('tempoMinus10Display').addEventListener('click', () => {
             this.core.adjustTempo(-10);
             this.updateDisplay();
+            this.core.saveSettings();
         });
         
-        document.getElementById('tempoMinus1').addEventListener('click', () => {
+        document.getElementById('tempoMinus1Display').addEventListener('click', () => {
             this.core.adjustTempo(-1);
             this.updateDisplay();
+            this.core.saveSettings();
         });
         
-        document.getElementById('tempoPlus1').addEventListener('click', () => {
+        document.getElementById('tempoPlus1Display').addEventListener('click', () => {
             this.core.adjustTempo(1);
             this.updateDisplay();
+            this.core.saveSettings();
         });
         
-        document.getElementById('tempoPlus10').addEventListener('click', () => {
+        document.getElementById('tempoPlus10Display').addEventListener('click', () => {
             this.core.adjustTempo(10);
             this.updateDisplay();
+            this.core.saveSettings();
         });
         
-        document.getElementById('tapTempoAdvanced').addEventListener('click', () => {
+        document.getElementById('tapTempoDisplay').addEventListener('click', () => {
             this.core.tapTempo();
             this.updateDisplay();
+            this.core.saveSettings();
         });
         
         // Time signature
@@ -684,6 +743,7 @@ class UIController {
             this.generateBeatOptions(); // Update beat options
             this.updateDisplayMode(); // Update advanced dots
             this.updateDisplay();
+            this.core.saveSettings();
         });
         
         // Subdivision controls
@@ -695,6 +755,7 @@ class UIController {
                 // Regenerate beat dots to show new subdivision pattern
                 this.updateDisplayMode();
                 this.updateDisplay();
+                this.core.saveSettings();
             });
         });
         
@@ -702,20 +763,17 @@ class UIController {
         document.querySelectorAll('.emphasis-checkbox').forEach(checkbox => {
             checkbox.addEventListener('change', () => {
                 this.updateBeatEmphasis();
+                this.core.saveSettings();
             });
         });
         
-        // Preset buttons
-        document.querySelectorAll('.preset-btn').forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                this.applyEmphasisPreset(e.target.dataset.preset);
-            });
-        });
+        // Preset buttons removed - only Beat 1 emphasis is available
         
         // Sound selection
         document.querySelectorAll('input[name="beatSound"]').forEach(radio => {
             radio.addEventListener('change', (e) => {
                 this.core.setBeatSound(e.target.value);
+                this.core.saveSettings();
             });
         });
         
@@ -723,6 +781,7 @@ class UIController {
         document.getElementById('subdivisionEmphasisToggle').addEventListener('change', (e) => {
             this.core.playSubdivisionSounds = e.target.checked;
             this.updateDisplay();
+            this.core.saveSettings();
         });
         
         // Display mode
@@ -733,6 +792,7 @@ class UIController {
                 this.core.setDisplayMode(e.target.dataset.display);
                 this.updateDisplayMode();
                 this.updateDisplay();
+                this.core.saveSettings();
             });
         });
         
@@ -860,55 +920,6 @@ class UIController {
             this.generateAdvancedBeatDots();
         }
         
-        this.updatePresetButtonText();
-    }
-    
-    applyEmphasisPreset(preset) {
-        const checkboxes = document.querySelectorAll('.emphasis-checkbox');
-        const allBtn = document.querySelector('.preset-btn[data-preset="all"]');
-        
-        // Check if all beats are currently emphasized
-        const allBeatsEmphasized = Array.from(checkboxes).every(checkbox => {
-            const beat = parseInt(checkbox.dataset.beat);
-            return beat > this.core.beatsPerBar || checkbox.checked;
-        });
-        
-        checkboxes.forEach(checkbox => {
-            const beat = parseInt(checkbox.dataset.beat);
-            
-            switch (preset) {
-                case 'all':
-                    if (allBeatsEmphasized) {
-                        // If all beats are emphasized, clear all
-                        checkbox.checked = false;
-                        if (allBtn) allBtn.textContent = 'All Beats';
-                    } else {
-                        // If not all beats are emphasized, select all
-                        checkbox.checked = beat <= this.core.beatsPerBar;
-                        if (allBtn) allBtn.textContent = 'Select None';
-                    }
-                    break;
-            }
-        });
-        
-        this.updateBeatEmphasis();
-        this.updatePresetButtonText();
-    }
-    
-    updatePresetButtonText() {
-        const checkboxes = document.querySelectorAll('.emphasis-checkbox');
-        const allBtn = document.querySelector('.preset-btn[data-preset="all"]');
-        
-        if (!allBtn) return;
-        
-        // Check if all beats are currently emphasized
-        const allBeatsEmphasized = Array.from(checkboxes).every(checkbox => {
-            const beat = parseInt(checkbox.dataset.beat);
-            return beat > this.core.beatsPerBar || checkbox.checked;
-        });
-        
-        // Update button text based on current state
-        allBtn.textContent = allBeatsEmphasized ? 'Select None' : 'All Beats';
     }
     
     generateAdvancedBeatDots() {
@@ -1327,18 +1338,23 @@ Other:
         this.updateMicrophoneStatus();
     }
     
-    toggleMicrophoneListening() {
+    async toggleMicrophoneListening() {
         if (this.core.isMicrophoneEnabled) {
             this.core.stopMicrophoneListening();
             this.updateMicrophoneStatus();
         } else {
             console.log('Attempting to start microphone listening...');
-            const success = this.core.startMicrophoneListening();
-            if (success) {
-                console.log('Microphone listening started successfully');
-                this.updateMicrophoneStatus();
-            } else {
-                console.error('Failed to start microphone listening');
+            try {
+                const success = await this.core.startMicrophoneListening();
+                if (success) {
+                    console.log('Microphone listening started successfully');
+                    this.updateMicrophoneStatus();
+                } else {
+                    console.error('Failed to start microphone listening');
+                    this.showMicrophoneError('Failed to start microphone listening. Please check microphone permissions.');
+                }
+            } catch (error) {
+                console.error('Error starting microphone listening:', error);
                 this.showMicrophoneError('Failed to start microphone listening. Please check microphone permissions.');
             }
         }
@@ -1367,8 +1383,8 @@ Other:
             }
         } else {
             indicator.classList.remove('active');
-            toggleBtn.textContent = 'Microphone Not Available';
-            toggleBtn.disabled = true;
+            toggleBtn.textContent = 'Start Listening';
+            toggleBtn.disabled = false;
         }
     }
     
@@ -1490,11 +1506,6 @@ The detected tempo can be applied to your metronome by clicking the detected tem
     }
     
     setupCountInControls() {
-        // Start Metronome button
-        document.getElementById('metronomeStartBtn').addEventListener('click', () => {
-            this.toggleMetronome();
-        });
-        
         // Start with Count-In button
         document.getElementById('metronomeCountInBtn').addEventListener('click', () => {
             this.toggleCountIn();
@@ -1502,16 +1513,6 @@ The detected tempo can be applied to your metronome by clicking the detected tem
         
         // Update button states
         this.updateMetronomeButtons();
-    }
-    
-    toggleMetronome() {
-        if (this.core.isActive()) {
-            this.core.stop();
-            this.updateMetronomeButtons();
-        } else {
-            this.core.start();
-            this.updateMetronomeButtons();
-        }
     }
     
     toggleCountIn() {
@@ -1525,22 +1526,48 @@ The detected tempo can be applied to your metronome by clicking the detected tem
     }
     
     updateMetronomeButtons() {
-        const startBtn = document.getElementById('metronomeStartBtn');
         const countInBtn = document.getElementById('metronomeCountInBtn');
         
         if (this.core.isActive()) {
-            // Metronome is active, show stop buttons
-            startBtn.textContent = 'Stop Metronome';
-            startBtn.classList.add('stopped');
+            // Metronome is active, show stop button
             countInBtn.textContent = 'Stop Metronome';
             countInBtn.classList.add('stopped');
         } else {
-            // Metronome is stopped, show start buttons
-            startBtn.textContent = 'Start Metronome';
-            startBtn.classList.remove('stopped');
+            // Metronome is stopped, show start button
             countInBtn.textContent = 'Start with Count-In';
             countInBtn.classList.remove('stopped');
         }
+    }
+    
+    loadSettingsToUI() {
+        // Update tempo display
+        this.updateDisplay();
+        
+        // Update time signature select
+        const timeSignatureSelect = document.getElementById('timeSignatureSelect');
+        if (timeSignatureSelect) {
+            timeSignatureSelect.value = `${this.core.timeSignature.numerator}/${this.core.timeSignature.denominator}`;
+        }
+        
+        // Update beat sound selection
+        const beatSoundRadios = document.querySelectorAll('input[name="beatSound"]');
+        beatSoundRadios.forEach(radio => {
+            if (radio.value === this.core.beatSound) {
+                radio.checked = true;
+            }
+        });
+        
+        // Update subdivision selection
+        const subdivisionBtns = document.querySelectorAll('.subdivision-btn');
+        subdivisionBtns.forEach(btn => {
+            btn.classList.remove('active');
+            if (btn.dataset.subdivision === this.core.subdivision) {
+                btn.classList.add('active');
+            }
+        });
+        
+        // Update microphone status
+        this.updateMicrophoneStatus();
     }
 }
 
