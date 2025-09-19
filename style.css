@@ -245,13 +245,12 @@ body {
 
 .tempo-buttons {
     display: flex;
-    justify-content: center;
     gap: 10px;
     margin-bottom: 15px;
 }
 
 .tempo-buttons .tempo-btn {
-    width: 40px;
+    flex: 1;
     height: 40px;
     font-size: 0.9rem;
 }
