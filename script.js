@@ -13,8 +13,11 @@ class MetronomeCore {
         // Audio system
         this.audioManager = null;
         
-        // UI callback
+        // UI callbacks
         this.onBeatChange = null;
+        this.onTempoDetected = null;
+        this.onVolumeUpdate = null;
+        this.onMicrophoneError = null;
         
         // Advanced features
         this.timeSignature = { numerator: 4, denominator: 4 };
@@ -50,6 +53,9 @@ class MetronomeCore {
         // Microphone input
         this.microphoneInput = null;
         this.isMicrophoneEnabled = false;
+        this.detectedTempo = 120;
+        this.tempoConfidence = 0;
+        this.currentVolume = 0;
         
         // Count-in functionality
         this.isCountInActive = false;
@@ -80,6 +86,37 @@ class MetronomeCore {
         // Initialize microphone input but don't request permission by default
         this.microphoneInput = new MicrophoneInput();
         this.isMicrophoneEnabled = false;
+        
+        // Set up callbacks for microphone input
+        this.microphoneInput.onTempoDetected = (tempo, confidence) => {
+            this.detectedTempo = tempo;
+            this.tempoConfidence = confidence;
+            console.log(`Tempo detected: ${tempo} BPM (confidence: ${confidence}%)`);
+            
+            // Notify UI if callback is set
+            if (this.onTempoDetected) {
+                this.onTempoDetected(tempo, confidence);
+            }
+        };
+        
+        this.microphoneInput.onVolumeUpdate = (volume) => {
+            this.currentVolume = volume;
+            
+            // Notify UI if callback is set
+            if (this.onVolumeUpdate) {
+                this.onVolumeUpdate(volume);
+            }
+        };
+        
+        this.microphoneInput.onError = (error) => {
+            console.error('Microphone error:', error);
+            
+            // Notify UI if callback is set
+            if (this.onMicrophoneError) {
+                this.onMicrophoneError(error);
+            }
+        };
+        
         console.log('Microphone input ready (permission not requested by default)');
     }
     
@@ -1336,6 +1373,9 @@ Other:
         
         // Initialize microphone display
         this.updateMicrophoneStatus();
+        
+        // Set default sensitivity
+        this.core.setMicrophoneSensitivity(90);
     }
     
     async toggleMicrophoneListening() {
@@ -1344,8 +1384,12 @@ Other:
             this.updateMicrophoneStatus();
         } else {
             console.log('Attempting to start microphone listening...');
+            console.log('Microphone input instance:', this.core.microphoneInput);
+            console.log('Microphone input status:', this.core.getMicrophoneStatus());
+            
             try {
                 const success = await this.core.startMicrophoneListening();
+                console.log('Start listening result:', success);
                 if (success) {
                     console.log('Microphone listening started successfully');
                     this.updateMicrophoneStatus();
