@@ -156,7 +156,7 @@ class MicrophoneInput {
         }
         
         // Debug logging (remove after testing)
-        if (Math.random() < 0.01) { // Log 1% of the time to avoid spam
+        if (Math.random() < 0.1) { // Log 10% of the time to see more activity
             const thresholds = this.getDetectionThresholds();
             console.log(`Audio: Vol=${averageVolume.toFixed(3)}/${thresholds.volume.toFixed(3)}, FreqVol=${frequencyVolume.toFixed(3)}/${thresholds.frequency.toFixed(3)}, Onset=${onsetStrength.toFixed(3)}/${thresholds.onset.toFixed(3)}, Centroid=${spectralCentroid.toFixed(1)}`);
         }
@@ -270,6 +270,17 @@ class MicrophoneInput {
         // Get detection thresholds based on mode
         const thresholds = this.getDetectionThresholds();
         
+        // For guitar mode, use a much simpler approach - just check volume
+        if (this.detectionMode === 'guitar') {
+            // Just check if volume is above threshold
+            if (volume > thresholds.volume) {
+                console.log(`Guitar beat detected! Vol=${volume.toFixed(3)} > ${thresholds.volume.toFixed(3)}`);
+                return true;
+            }
+            return false;
+        }
+        
+        // For other modes, use the original logic
         // Check volume threshold
         if (volume < thresholds.volume) {
             return false;
@@ -338,10 +349,10 @@ class MicrophoneInput {
             case 'guitar':
                 return {
                     ...baseThresholds,
-                    volume: this.beatThreshold * 0.5, // Very lenient
-                    frequency: this.beatThreshold * 0.4, // Very lenient
-                    onset: this.onsetThreshold * 0.1, // Extremely lenient
-                    volumeIncrease: 1.02 // Very lenient
+                    volume: this.beatThreshold * 0.3, // Extremely lenient - just volume
+                    frequency: this.beatThreshold * 0.4, // Not used for guitar
+                    onset: this.onsetThreshold * 0.1, // Not used for guitar
+                    volumeIncrease: 1.02 // Not used for guitar
                 };
             default: // mixed
                 return baseThresholds;
