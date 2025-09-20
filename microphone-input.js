@@ -14,7 +14,7 @@ class MicrophoneInput {
         this.beatHistory = [];
         this.lastBeatTime = 0;
         this.beatThreshold = 0.1; // Will be calculated from sensitivity slider
-        this.minBeatInterval = 200; // Minimum time between beats (ms)
+        this.minBeatInterval = 100; // Minimum time between beats (ms) - allows up to 600 BPM
         this.maxBeatInterval = 2000; // Maximum time between beats (ms)
         
         // Tempo calculation
@@ -355,9 +355,14 @@ class MicrophoneInput {
         const tenSecondsAgo = now - 10000;
         this.beatHistory = this.beatHistory.filter(time => time > tenSecondsAgo);
         
+        console.log(`Beat detected! Total beats: ${this.beatHistory.length}`);
+        
         // Calculate tempo if we have enough beats
         if (this.beatHistory.length >= 2) {
+            console.log('Calculating tempo...');
             this.calculateTempo();
+        } else {
+            console.log(`Need ${2 - this.beatHistory.length} more beats for tempo calculation`);
         }
         
         // Notify callback
@@ -369,22 +374,32 @@ class MicrophoneInput {
     calculateTempo() {
         if (this.beatHistory.length < 2) return;
         
+        console.log(`Calculating tempo from ${this.beatHistory.length} beats`);
+        
         // Calculate intervals between beats
         const intervals = [];
         for (let i = 1; i < this.beatHistory.length; i++) {
             const interval = this.beatHistory[i] - this.beatHistory[i - 1];
+            console.log(`Interval ${i}: ${interval}ms (min: ${this.minBeatInterval}, max: ${this.maxBeatInterval})`);
             if (interval >= this.minBeatInterval && interval <= this.maxBeatInterval) {
                 intervals.push(interval);
             }
         }
         
-        if (intervals.length === 0) return;
+        console.log(`Valid intervals: ${intervals.length}`);
+        
+        if (intervals.length === 0) {
+            console.log('No valid intervals found');
+            return;
+        }
         
         // Calculate average interval
         const avgInterval = intervals.reduce((sum, interval) => sum + interval, 0) / intervals.length;
         
         // Convert to BPM
         const newTempo = Math.round(60000 / avgInterval);
+        
+        console.log(`Calculated tempo: ${newTempo} BPM (avg interval: ${avgInterval.toFixed(1)}ms)`);
         
         // Validate tempo range
         if (newTempo >= 30 && newTempo <= 300) {
@@ -400,6 +415,8 @@ class MicrophoneInput {
             const avgTempo = this.tempoHistory.reduce((sum, tempo) => sum + tempo, 0) / this.tempoHistory.length;
             this.detectedTempo = Math.round(avgTempo);
             
+            console.log(`Final tempo: ${this.detectedTempo} BPM (from ${this.tempoHistory.length} calculations)`);
+            
             // Calculate confidence based on consistency
             this.calculateConfidence();
             
@@ -407,6 +424,8 @@ class MicrophoneInput {
             if (this.onTempoDetected) {
                 this.onTempoDetected(this.detectedTempo, this.tempoConfidence);
             }
+        } else {
+            console.log(`Tempo ${newTempo} BPM is outside valid range (30-300)`);
         }
     }
     
