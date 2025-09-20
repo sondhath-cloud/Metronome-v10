@@ -35,9 +35,7 @@ dist/
 ├── script.js           # Main application logic
 ├── audio-manager.js    # Audio system and TTS
 ├── microphone-input.js # Microphone tempo detection
-├── audio/              # Audio files for count-in
-│   ├── countin-accent.mp3
-│   └── countin-beat.mp3
+├── test.html           # Server diagnostic tool
 └── README.md           # This file
 ```
 
