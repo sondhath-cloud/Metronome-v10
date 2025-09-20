@@ -151,12 +151,34 @@
                                 <button class="microphone-reset-btn" id="microphoneReset">Reset</button>
                             </div>
                             <div class="sensitivity-controls">
-                                <h4>Sensitivity Settings</h4>
+                                <h4>Detection Settings</h4>
+                                
+                                <!-- Instrument Detection Mode -->
+                                <div class="detection-mode-container">
+                                    <label for="detectionModeSelect">Instrument Type:</label>
+                                    <select id="detectionModeSelect" class="interval-input">
+                                        <option value="mixed">Mixed Audio</option>
+                                        <option value="bass">Bass Guitar</option>
+                                        <option value="drums">Drums</option>
+                                        <option value="guitar">Guitar</option>
+                                    </select>
+                                </div>
+                                
+                                <!-- Sensitivity Controls -->
                                 <div class="sensitivity-slider-container">
                                     <label for="sensitivitySlider">Sensitivity:</label>
                                     <input type="range" id="sensitivitySlider" min="0" max="100" value="90" class="sensitivity-slider">
                                     <span class="sensitivity-value" id="sensitivityValue">90%</span>
                                 </div>
+                                
+                                <!-- Onset Detection -->
+                                <div class="sensitivity-slider-container">
+                                    <label for="onsetSlider">Onset Detection:</label>
+                                    <input type="range" id="onsetSlider" min="0" max="100" value="30" class="sensitivity-slider">
+                                    <span class="sensitivity-value" id="onsetValue">30%</span>
+                                </div>
+                                
+                                <!-- Interval Controls -->
                                 <div class="interval-controls">
                                     <div class="interval-control">
                                         <label for="minIntervalInput">Min Beat Interval (ms):</label>

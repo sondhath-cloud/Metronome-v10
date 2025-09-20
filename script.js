@@ -560,6 +560,18 @@ class MetronomeCore {
         }
     }
     
+    setMicrophoneDetectionMode(mode) {
+        if (this.microphoneInput) {
+            this.microphoneInput.setDetectionMode(mode);
+        }
+    }
+    
+    setMicrophoneOnsetThreshold(threshold) {
+        if (this.microphoneInput) {
+            this.microphoneInput.setOnsetThreshold(threshold);
+        }
+    }
+    
     resetMicrophoneDetection() {
         if (this.microphoneInput) {
             this.microphoneInput.reset();
@@ -1360,6 +1372,23 @@ Other:
             this.core.setMicrophoneMaxInterval(value);
         });
         
+        // Detection mode select
+        document.getElementById('detectionModeSelect').addEventListener('change', (e) => {
+            const mode = e.target.value;
+            this.core.setMicrophoneDetectionMode(mode);
+            console.log(`Detection mode changed to: ${mode}`);
+        });
+        
+        // Onset detection slider
+        const onsetSlider = document.getElementById('onsetSlider');
+        const onsetValue = document.getElementById('onsetValue');
+        
+        onsetSlider.addEventListener('input', (e) => {
+            const value = parseInt(e.target.value);
+            onsetValue.textContent = value + '%';
+            this.core.setMicrophoneOnsetThreshold(value / 100);
+        });
+        
         // Microphone help button
         document.getElementById('microphoneHelpBtn').addEventListener('click', () => {
             this.showMicrophoneHelp();
@@ -1509,16 +1538,25 @@ Other:
     
     
     showMicrophoneHelp() {
-        const helpText = `Microphone Tempo Detection Help:
+        const helpText = `Enhanced Microphone Tempo Detection Help:
 
 How it works:
 • Click "Start Listening" to begin detecting beats
-• Clap, tap, or play music near your microphone
-• The system will analyze the audio and detect tempo
+• Play music or tap near your microphone
+• The system analyzes frequency content and onset patterns
 • Detected tempo and confidence will be displayed
 
-Sensitivity Settings:
-• Sensitivity: Higher = more sensitive (detects quieter sounds)
+Instrument Detection Modes:
+• Mixed Audio: General purpose detection for any audio
+• Bass Guitar: Optimized for low frequencies (20-80 Hz)
+• Drums: Focuses on percussive attacks and kick/snare
+• Guitar: Tuned for mid-range frequencies (320-640 Hz)
+
+Advanced Settings:
+• Sensitivity: Overall volume threshold for beat detection
+• Onset Detection: How sensitive to sudden audio changes
+  - Higher = better for drums and percussive instruments
+  - Lower = better for sustained instruments like bass
 • Min Beat Interval: Prevents detecting beats too close together
   - 200ms = max 300 BPM (default, good for most music)
   - 100ms = max 600 BPM (for very fast music)
@@ -1528,21 +1566,17 @@ Sensitivity Settings:
   - 1000ms = min 60 BPM (for faster music)
   - 5000ms = min 12 BPM (for very slow music)
 
+Instrument-Specific Tips:
+• Bass Guitar: Use "Bass Guitar" mode, lower onset detection (20-40%)
+• Drums: Use "Drums" mode, higher onset detection (60-80%)
+• Guitar: Use "Guitar" mode, moderate onset detection (40-60%)
+• Mixed Audio: Use "Mixed Audio" mode for general use
+
 Troubleshooting:
 • Check browser console for debug information
 • Ensure microphone permissions are granted
-• Try adjusting sensitivity settings
-
-Tips for best results:
-• Use a clear, consistent beat source
-• Adjust sensitivity if detecting too many/few beats
-• For loud music: lower sensitivity (50-70%)
-• For quiet sounds: higher sensitivity (80-100%)
-• For fast music: lower Min Beat Interval (100-150ms)
-• For slow music: higher Min Beat Interval (300-500ms)
-• For noisy environments: higher Min Beat Interval (300-400ms)
-• Higher confidence means more consistent tempo detection
-• Click "Reset" to clear detection history
+• Try different instrument modes for better results
+• Adjust onset detection based on your instrument
 
 The detected tempo can be applied to your metronome by clicking the detected tempo value.`;
         

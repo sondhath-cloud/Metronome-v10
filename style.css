@@ -849,6 +849,27 @@ body.dark-mode .tap-tempo-section h3 {
     color: #666;
 }
 
+.detection-mode-container {
+    margin-bottom: 15px;
+}
+
+.detection-mode-container label {
+    display: block;
+    margin-bottom: 5px;
+    font-size: 0.9rem;
+    color: #333;
+    font-weight: 500;
+}
+
+.detection-mode-container select {
+    width: 100%;
+    padding: 8px;
+    border: 2px solid #ddd;
+    border-radius: 4px;
+    font-size: 0.9rem;
+    background-color: white;
+}
+
 .interval-input {
     width: 100%;
     padding: 6px 8px;

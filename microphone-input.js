@@ -26,6 +26,27 @@ class MicrophoneInput {
         this.bufferLength = 0;
         this.smoothingFactor = 0.8; // How much to smooth the audio signal
         
+        // Frequency analysis
+        this.frequencyData = null;
+        this.timeData = null;
+        this.fftSize = 2048;
+        
+        // Instrument detection modes
+        this.detectionMode = 'mixed'; // 'bass', 'drums', 'guitar', 'mixed'
+        this.frequencyRanges = {
+            bass: { low: 0, high: 20 },      // 20-80 Hz
+            kick: { low: 20, high: 40 },     // 80-160 Hz  
+            snare: { low: 40, high: 80 },    // 160-320 Hz
+            guitar: { low: 80, high: 160 },  // 320-640 Hz
+            cymbals: { low: 160, high: 320 } // 640-1280 Hz
+        };
+        
+        // Onset detection
+        this.previousSpectrum = null;
+        this.onsetThreshold = 0.3;
+        this.spectralCentroid = 0;
+        this.zeroCrossingRate = 0;
+        
         // Callbacks
         this.onBeatDetected = null;
         this.onTempoDetected = null;
@@ -61,16 +82,18 @@ class MicrophoneInput {
             
             // Create analyser node
             this.analyser = this.audioContext.createAnalyser();
-            this.analyser.fftSize = 2048;
+            this.analyser.fftSize = this.fftSize;
             this.analyser.smoothingTimeConstant = this.smoothingFactor;
             
             // Create microphone source
             this.microphone = this.audioContext.createMediaStreamSource(stream);
             this.microphone.connect(this.analyser);
             
-            // Set up data array for analysis
+            // Set up data arrays for analysis
             this.bufferLength = this.analyser.frequencyBinCount;
             this.dataArray = new Uint8Array(this.bufferLength);
+            this.frequencyData = new Uint8Array(this.bufferLength);
+            this.timeData = new Uint8Array(this.analyser.fftSize);
             
             this.isInitialized = true;
             console.log('Microphone access granted and initialized successfully');
@@ -113,11 +136,15 @@ class MicrophoneInput {
     analyzeAudio() {
         if (!this.isListening) return;
         
-        // Get frequency data
-        this.analyser.getByteFrequencyData(this.dataArray);
+        // Get frequency and time domain data
+        this.analyser.getByteFrequencyData(this.frequencyData);
+        this.analyser.getByteTimeDomainData(this.timeData);
         
-        // Calculate average volume
+        // Calculate various audio features
         const averageVolume = this.calculateAverageVolume();
+        const frequencyVolume = this.calculateFrequencyVolume();
+        const onsetStrength = this.calculateOnsetStrength();
+        const spectralCentroid = this.calculateSpectralCentroid();
         
         // Update volume display
         if (this.onVolumeUpdate) {
@@ -126,12 +153,12 @@ class MicrophoneInput {
         
         // Debug logging (remove after testing)
         if (Math.random() < 0.01) { // Log 1% of the time to avoid spam
-            console.log('Audio volume:', averageVolume.toFixed(3), 'Threshold:', this.beatThreshold.toFixed(3));
+            console.log(`Audio: Vol=${averageVolume.toFixed(3)}, FreqVol=${frequencyVolume.toFixed(3)}, Onset=${onsetStrength.toFixed(3)}, Centroid=${spectralCentroid.toFixed(1)}`);
         }
         
-        // Detect beat
-        if (this.detectBeat(averageVolume)) {
-            console.log('Beat detected! Volume:', averageVolume.toFixed(3));
+        // Detect beat using enhanced method
+        if (this.detectBeatEnhanced(averageVolume, frequencyVolume, onsetStrength)) {
+            console.log(`Beat detected! Vol=${averageVolume.toFixed(3)}, FreqVol=${frequencyVolume.toFixed(3)}, Onset=${onsetStrength.toFixed(3)}`);
             this.processBeat();
         }
         
@@ -142,9 +169,54 @@ class MicrophoneInput {
     calculateAverageVolume() {
         let sum = 0;
         for (let i = 0; i < this.bufferLength; i++) {
-            sum += this.dataArray[i];
+            sum += this.frequencyData[i];
         }
         return sum / this.bufferLength / 255; // Normalize to 0-1
+    }
+    
+    calculateFrequencyVolume() {
+        const range = this.frequencyRanges[this.detectionMode] || this.frequencyRanges.mixed;
+        let sum = 0;
+        let count = 0;
+        
+        for (let i = range.low; i < Math.min(range.high, this.bufferLength); i++) {
+            sum += this.frequencyData[i];
+            count++;
+        }
+        
+        return count > 0 ? (sum / count) / 255 : 0; // Normalize to 0-1
+    }
+    
+    calculateOnsetStrength() {
+        if (!this.previousSpectrum) {
+            this.previousSpectrum = new Array(this.bufferLength).fill(0);
+            return 0;
+        }
+        
+        let onsetSum = 0;
+        for (let i = 0; i < this.bufferLength; i++) {
+            const diff = this.frequencyData[i] - this.previousSpectrum[i];
+            onsetSum += Math.max(0, diff); // Only positive changes
+        }
+        
+        // Store current spectrum for next calculation
+        this.previousSpectrum = Array.from(this.frequencyData);
+        
+        return onsetSum / this.bufferLength / 255; // Normalize to 0-1
+    }
+    
+    calculateSpectralCentroid() {
+        let weightedSum = 0;
+        let magnitudeSum = 0;
+        
+        for (let i = 0; i < this.bufferLength; i++) {
+            const magnitude = this.frequencyData[i];
+            weightedSum += i * magnitude;
+            magnitudeSum += magnitude;
+        }
+        
+        this.spectralCentroid = magnitudeSum > 0 ? weightedSum / magnitudeSum : 0;
+        return this.spectralCentroid;
     }
     
     detectBeat(volume) {
@@ -178,6 +250,96 @@ class MicrophoneInput {
         }
         
         return true;
+    }
+    
+    detectBeatEnhanced(volume, frequencyVolume, onsetStrength) {
+        const now = Date.now();
+        const timeSinceLastBeat = now - this.lastBeatTime;
+        
+        // Check if enough time has passed since last beat
+        if (timeSinceLastBeat < this.minBeatInterval) {
+            return false;
+        }
+        
+        // Get detection thresholds based on mode
+        const thresholds = this.getDetectionThresholds();
+        
+        // Check volume threshold
+        if (volume < thresholds.volume) {
+            return false;
+        }
+        
+        // Check frequency-specific volume
+        if (frequencyVolume < thresholds.frequency) {
+            return false;
+        }
+        
+        // Check onset strength for percussive detection
+        if (onsetStrength < thresholds.onset) {
+            return false;
+        }
+        
+        // For sustained instruments (like bass), be more lenient
+        if (this.detectionMode === 'bass' && volume > 0.3) {
+            return true;
+        }
+        
+        // For percussive instruments, require strong onset
+        if (this.detectionMode === 'drums' && onsetStrength < 0.4) {
+            return false;
+        }
+        
+        // Check for significant volume increase
+        const recentVolumes = this.beatHistory.slice(-3);
+        if (recentVolumes.length > 0) {
+            const avgRecentVolume = recentVolumes.reduce((a, b) => a + b, 0) / recentVolumes.length;
+            const volumeIncrease = volume / (avgRecentVolume + 0.001); // Avoid division by zero
+            
+            if (volumeIncrease < thresholds.volumeIncrease) {
+                return false;
+            }
+        }
+        
+        return true;
+    }
+    
+    getDetectionThresholds() {
+        const baseThresholds = {
+            volume: this.beatThreshold,
+            frequency: this.beatThreshold * 0.7,
+            onset: this.onsetThreshold,
+            volumeIncrease: 1.1
+        };
+        
+        // Adjust thresholds based on detection mode
+        switch (this.detectionMode) {
+            case 'bass':
+                return {
+                    ...baseThresholds,
+                    volume: this.beatThreshold * 0.8,
+                    frequency: this.beatThreshold * 0.5,
+                    onset: this.onsetThreshold * 0.6,
+                    volumeIncrease: 1.05
+                };
+            case 'drums':
+                return {
+                    ...baseThresholds,
+                    volume: this.beatThreshold * 1.2,
+                    frequency: this.beatThreshold * 0.9,
+                    onset: this.onsetThreshold * 1.5,
+                    volumeIncrease: 1.3
+                };
+            case 'guitar':
+                return {
+                    ...baseThresholds,
+                    volume: this.beatThreshold * 0.9,
+                    frequency: this.beatThreshold * 0.8,
+                    onset: this.onsetThreshold * 0.8,
+                    volumeIncrease: 1.15
+                };
+            default: // mixed
+                return baseThresholds;
+        }
     }
     
     processBeat() {
@@ -280,6 +442,22 @@ class MicrophoneInput {
         console.log(`Maximum beat interval set to ${interval}ms`);
     }
     
+    // Detection mode control
+    setDetectionMode(mode) {
+        if (['bass', 'drums', 'guitar', 'mixed'].includes(mode)) {
+            this.detectionMode = mode;
+            console.log(`Detection mode set to: ${mode}`);
+        } else {
+            console.warn(`Invalid detection mode: ${mode}. Using 'mixed' instead.`);
+            this.detectionMode = 'mixed';
+        }
+    }
+    
+    setOnsetThreshold(threshold) {
+        this.onsetThreshold = Math.max(0, Math.min(1, threshold));
+        console.log(`Onset threshold set to: ${this.onsetThreshold}`);
+    }
+    
     // Get current status
     getStatus() {
         return {
@@ -289,7 +467,10 @@ class MicrophoneInput {
             tempoConfidence: this.tempoConfidence,
             beatThreshold: this.beatThreshold,
             recentBeats: this.beatHistory.length,
-            tempoHistory: [...this.tempoHistory]
+            tempoHistory: [...this.tempoHistory],
+            detectionMode: this.detectionMode,
+            onsetThreshold: this.onsetThreshold,
+            spectralCentroid: this.spectralCentroid
         };
     }
     
