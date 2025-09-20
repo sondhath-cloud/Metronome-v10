@@ -1543,23 +1543,24 @@ Other:
 How it works:
 • Click "Start Listening" to begin detecting beats
 • Play music or tap near your microphone
-• The system analyzes frequency content and onset patterns
+• The system analyzes frequency content and rhythm patterns
 • Detected tempo and confidence will be displayed
 
 Instrument Detection Modes:
-• Mixed Audio: General purpose detection for any audio
-• Bass Guitar: Optimized for low frequencies (20-80 Hz)
-• Drums: Focuses on percussive attacks and kick/snare
-• Guitar: Tuned for mid-range frequencies (320-640 Hz)
+• Other: General purpose detection for any instrument (default)
+• Drums: Optimized for percussive attacks and kick/snare
+• Guitar: Tuned for mid-range frequencies and guitar sounds
 
 Advanced Settings:
 • Sensitivity: Overall volume threshold for beat detection
+  - Higher = more sensitive (detects quieter sounds)
+  - Lower = less sensitive (only detects loud sounds)
 • Onset Detection: How sensitive to sudden audio changes
   - Higher = better for drums and percussive instruments
-  - Lower = better for sustained instruments like bass
+  - Lower = better for sustained instruments
 • Min Beat Interval: Prevents detecting beats too close together
-  - 200ms = max 300 BPM (default, good for most music)
-  - 100ms = max 600 BPM (for very fast music)
+  - 100ms = max 600 BPM (default, good for fast music)
+  - 200ms = max 300 BPM (for moderate tempos)
   - 500ms = max 120 BPM (for slow music)
 • Max Beat Interval: Ignores beats too far apart
   - 2000ms = min 30 BPM (default, good for most music)
@@ -1567,16 +1568,15 @@ Advanced Settings:
   - 5000ms = min 12 BPM (for very slow music)
 
 Instrument-Specific Tips:
-• Bass Guitar: Use "Bass Guitar" mode, lower onset detection (20-40%)
-• Drums: Use "Drums" mode, higher onset detection (60-80%)
-• Guitar: Use "Guitar" mode, moderate onset detection (40-60%)
-• Mixed Audio: Use "Mixed Audio" mode for general use
+• Drums: Use "Drums" mode, higher sensitivity (70-90%)
+• Guitar: Use "Guitar" mode, moderate sensitivity (60-80%)
+• Other: Use "Other" mode for bass, piano, or mixed instruments
 
-Troubleshooting:
-• Check browser console for debug information
-• Ensure microphone permissions are granted
-• Try different instrument modes for better results
-• Adjust onset detection based on your instrument
+Best Results:
+• Place microphone close to your instrument
+• Use appropriate instrument mode for your instrument type
+• Adjust sensitivity based on your playing volume
+• Works best with clear, rhythmic playing
 
 The detected tempo can be applied to your metronome by clicking the detected tempo value.`;
         

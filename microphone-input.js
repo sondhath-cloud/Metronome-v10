@@ -14,7 +14,8 @@ class MicrophoneInput {
         this.beatHistory = [];
         this.lastBeatTime = 0;
         this.beatThreshold = 0.1; // Will be calculated from sensitivity slider
-        this.minBeatInterval = 200; // Minimum time between beats (ms) - allows up to 300 BPM
+        this.sensitivity = 90; // User sensitivity setting (0-100)
+        this.minBeatInterval = 100; // Minimum time between beats (ms) - allows up to 600 BPM
         this.maxBeatInterval = 2000; // Maximum time between beats (ms)
         
         // Tempo calculation
@@ -32,14 +33,11 @@ class MicrophoneInput {
         this.fftSize = 2048;
         
         // Instrument detection modes
-        this.detectionMode = 'mixed'; // 'bass', 'drums', 'guitar', 'mixed'
+        this.detectionMode = 'other'; // 'drums', 'guitar', 'other'
         this.frequencyRanges = {
-            bass: { low: 0, high: 20 },      // 20-80 Hz
-            kick: { low: 20, high: 40 },     // 80-160 Hz  
-            snare: { low: 40, high: 80 },    // 160-320 Hz
-            guitar: { low: 80, high: 160 },  // 320-640 Hz
-            cymbals: { low: 160, high: 320 }, // 640-1280 Hz
-            mixed: { low: 0, high: 160 }     // Full range for mixed mode
+            drums: { low: 20, high: 80 },    // 80-320 Hz - kick and snare range
+            guitar: { low: 40, high: 120 },  // 160-480 Hz - mid-range frequencies
+            other: { low: 0, high: 160 }     // Full range for other instruments
         };
         
         // Onset detection
@@ -156,15 +154,13 @@ class MicrophoneInput {
             this.onVolumeUpdate(averageVolume);
         }
         
-        // Debug logging (remove after testing)
-        if (Math.random() < 0.1) { // Log 10% of the time to see more activity
-            const thresholds = this.getDetectionThresholds();
-            console.log(`Audio: Vol=${averageVolume.toFixed(3)}/${thresholds.volume.toFixed(3)}, FreqVol=${frequencyVolume.toFixed(3)}/${thresholds.frequency.toFixed(3)}, Onset=${onsetStrength.toFixed(3)}/${thresholds.onset.toFixed(3)}, Centroid=${spectralCentroid.toFixed(1)}`);
+        // Debug logging (reduced frequency for cleaner output)
+        if (Math.random() < 0.02) { // Log 2% of the time
+            console.log(`Audio Analysis - Mode: ${this.detectionMode}, Vol: ${averageVolume.toFixed(3)}, FreqVol: ${frequencyVolume.toFixed(3)}, Onset: ${onsetStrength.toFixed(3)}, Centroid: ${spectralCentroid.toFixed(1)}`);
         }
         
         // Detect beat using enhanced method
         if (this.detectBeatEnhanced(averageVolume, frequencyVolume, onsetStrength)) {
-            console.log(`Beat detected! Vol=${averageVolume.toFixed(3)}, FreqVol=${frequencyVolume.toFixed(3)}, Onset=${onsetStrength.toFixed(3)}`);
             this.processBeat();
         }
         
@@ -201,13 +197,24 @@ class MicrophoneInput {
         
         let sum = 0;
         let count = 0;
+        let maxValue = 0;
         
+        // Calculate weighted average with emphasis on peak values
         for (let i = range.low; i < Math.min(range.high, this.bufferLength); i++) {
-            sum += this.frequencyData[i];
+            const value = this.frequencyData[i];
+            sum += value;
+            maxValue = Math.max(maxValue, value);
             count++;
         }
         
-        return count > 0 ? (sum / count) / 255 : 0; // Normalize to 0-1
+        if (count === 0) return 0;
+        
+        // Use both average and peak for better detection
+        const average = sum / count / 255;
+        const peak = maxValue / 255;
+        
+        // Weighted combination: 70% average, 30% peak
+        return average * 0.7 + peak * 0.3;
     }
     
     calculateOnsetStrength() {
@@ -285,43 +292,254 @@ class MicrophoneInput {
             return false;
         }
         
-        // Simple energy-based detection (proven approach from successful apps)
-        // This is much more reliable than complex frequency analysis
+        // Calculate multiple energy measures for better detection
+        let rmsEnergy = 0;
+        let peakEnergy = 0;
+        let spectralEnergy = 0;
         
-        // Calculate energy (RMS) from the time domain data
-        let energy = 0;
         if (this.timeData && this.bufferLength) {
+            // RMS Energy (overall loudness)
             for (let i = 0; i < this.bufferLength; i++) {
                 const sample = (this.timeData[i] - 128) / 128; // Normalize to -1 to 1
-                energy += sample * sample;
+                rmsEnergy += sample * sample;
+                peakEnergy = Math.max(peakEnergy, Math.abs(sample));
             }
-            energy = Math.sqrt(energy / this.bufferLength);
+            rmsEnergy = Math.sqrt(rmsEnergy / this.bufferLength);
         }
         
-        // Adaptive threshold based on recent energy levels
+        // Spectral energy (frequency content)
+        if (this.frequencyData && this.bufferLength) {
+            const range = this.frequencyRanges[this.detectionMode] || this.frequencyRanges.mixed;
+            for (let i = range.low; i < Math.min(range.high, this.bufferLength); i++) {
+                spectralEnergy += this.frequencyData[i];
+            }
+            spectralEnergy = spectralEnergy / (range.high - range.low) / 255;
+        }
+        
+        // Calculate spectral centroid for additional context
+        const spectralCentroid = this.calculateSpectralCentroid();
+        
+        // Combined energy measure (weighted combination)
+        const energy = rmsEnergy * 0.6 + peakEnergy * 0.3 + spectralEnergy * 0.1;
+        
+        // Initialize energy history if needed
         this.energyHistory = this.energyHistory || [];
         this.energyHistory.push(energy);
         
-        // Keep only last 20 energy readings
-        if (this.energyHistory.length > 20) {
+        // Keep only last 30 energy readings (about 1 second at 30fps)
+        if (this.energyHistory.length > 30) {
             this.energyHistory.shift();
         }
         
-        // Calculate average energy over time
-        const avgEnergy = this.energyHistory.reduce((a, b) => a + b, 0) / this.energyHistory.length;
-        
-        // Dynamic threshold: 2.0x average energy + small base threshold (less sensitive)
-        const dynamicThreshold = Math.max(avgEnergy * 2.0, 0.02);
-        
-        // Beat detected if current energy exceeds dynamic threshold
-        const beatDetected = energy > dynamicThreshold;
-        
-        if (beatDetected) {
-            const timeSinceLastBeat = now - this.lastBeatTime;
-            console.log(`Beat detected! Energy=${energy.toFixed(4)} > ${dynamicThreshold.toFixed(4)} (avg=${avgEnergy.toFixed(4)}) - Time since last: ${timeSinceLastBeat}ms`);
+        // Need at least 5 readings for reliable threshold calculation
+        if (this.energyHistory.length < 5) {
+            return false;
         }
         
-        return beatDetected;
+        // Calculate adaptive threshold based on instrument mode
+        const threshold = this.calculateAdaptiveThreshold(energy, spectralCentroid);
+        
+        // Beat detection with confidence scoring
+        const beatDetected = energy > threshold.energy;
+        const confidence = this.calculateBeatConfidence(energy, threshold, spectralCentroid);
+        
+        // Additional rhythm pattern analysis for musical beats
+        const rhythmConfidence = this.analyzeRhythmPattern(now);
+        
+        // Lower confidence threshold for musical content
+        const minConfidence = this.detectionMode === 'other' ? 0.2 : 0.3;
+        const finalConfidence = Math.max(confidence, rhythmConfidence);
+        
+        // Debug logging (every 20th frame to reduce noise)
+        if (Math.random() < 0.05) {
+            console.log(`Energy: ${energy.toFixed(4)}, Threshold: ${threshold.energy.toFixed(4)}, Confidence: ${finalConfidence.toFixed(2)}, Rhythm: ${rhythmConfidence.toFixed(2)}, Mode: ${this.detectionMode}`);
+        }
+        
+        if (beatDetected && finalConfidence > minConfidence) {
+            console.log(`Beat detected! Energy=${energy.toFixed(4)} > ${threshold.energy.toFixed(4)}, Confidence: ${finalConfidence.toFixed(2)}`);
+            return true;
+        }
+        
+        return false;
+    }
+    
+    calculateAdaptiveThreshold(currentEnergy, spectralCentroid) {
+        const history = this.energyHistory;
+        const recentHistory = history.slice(-10); // Last 10 readings
+        
+        // Calculate statistics
+        const mean = recentHistory.reduce((a, b) => a + b, 0) / recentHistory.length;
+        const variance = recentHistory.reduce((a, b) => a + Math.pow(b - mean, 2), 0) / recentHistory.length;
+        const stdDev = Math.sqrt(variance);
+        
+        // Base threshold multiplier based on instrument mode
+        let baseMultiplier = 1.5;
+        let spectralWeight = 0.1;
+        
+        switch (this.detectionMode) {
+            case 'drums':
+                baseMultiplier = 2.2; // Less sensitive for drums (they're loud)
+                spectralWeight = 0.3; // More spectral influence for transients
+                break;
+            case 'guitar':
+                baseMultiplier = 1.6; // Moderate sensitivity
+                spectralWeight = 0.2; // Moderate spectral influence
+                break;
+            case 'other':
+            default:
+                baseMultiplier = 1.7; // Balanced sensitivity
+                spectralWeight = 0.15; // Balanced spectral influence
+                break;
+        }
+        
+        // Apply sensitivity slider adjustment
+        // Sensitivity 0-100 maps to 0.3-2.5 multiplier range (more range for musical content)
+        // Higher sensitivity = lower threshold = more sensitive detection
+        const sensitivityMultiplier = 0.3 + (this.sensitivity / 100) * 2.2;
+        baseMultiplier = baseMultiplier / sensitivityMultiplier;
+        
+        // Additional adjustment for musical content
+        if (this.detectionMode === 'other') {
+            // More aggressive detection for other instruments
+            baseMultiplier = baseMultiplier * 0.8; // 20% more sensitive
+        }
+        
+        // Adaptive threshold that considers:
+        // 1. Recent energy mean
+        // 2. Energy variance (more variance = higher threshold)
+        // 3. Spectral centroid (higher = more high-freq content = likely transients)
+        // 4. User sensitivity setting
+        const energyThreshold = mean * baseMultiplier + stdDev * 0.5;
+        const spectralAdjustment = (spectralCentroid / this.bufferLength) * spectralWeight;
+        const finalThreshold = energyThreshold + spectralAdjustment;
+        
+        return {
+            energy: Math.max(finalThreshold, 0.01), // Minimum threshold
+            mean: mean,
+            stdDev: stdDev,
+            spectralCentroid: spectralCentroid,
+            sensitivityMultiplier: sensitivityMultiplier
+        };
+    }
+    
+    calculateBeatConfidence(energy, threshold, spectralCentroid) {
+        // Confidence based on multiple factors
+        let confidence = 0;
+        
+        // Energy confidence (0-0.5)
+        const energyRatio = energy / threshold.energy;
+        confidence += Math.min(0.5, (energyRatio - 1) * 0.5);
+        
+        // Spectral confidence (0-0.3)
+        const spectralRatio = spectralCentroid / (this.bufferLength * 0.5);
+        confidence += Math.min(0.3, spectralRatio * 0.3);
+        
+        // Consistency confidence (0-0.2)
+        if (this.energyHistory.length >= 5) {
+            const recentVariance = this.calculateRecentVariance();
+            const consistencyScore = Math.max(0, 1 - recentVariance * 10);
+            confidence += consistencyScore * 0.2;
+        }
+        
+        return Math.min(1, confidence);
+    }
+    
+    calculateRecentVariance() {
+        if (this.energyHistory.length < 5) return 1;
+        
+        const recent = this.energyHistory.slice(-5);
+        const mean = recent.reduce((a, b) => a + b, 0) / recent.length;
+        const variance = recent.reduce((a, b) => a + Math.pow(b - mean, 2), 0) / recent.length;
+        return Math.sqrt(variance);
+    }
+    
+    analyzeRhythmPattern(currentTime) {
+        // Initialize rhythm analysis if needed
+        if (!this.rhythmHistory) {
+            this.rhythmHistory = [];
+            this.rhythmPatterns = [];
+        }
+        
+        // Add current energy to rhythm history
+        if (this.energyHistory.length > 0) {
+            const currentEnergy = this.energyHistory[this.energyHistory.length - 1];
+            this.rhythmHistory.push({
+                time: currentTime,
+                energy: currentEnergy
+            });
+        }
+        
+        // Keep only last 2 seconds of rhythm data
+        const twoSecondsAgo = currentTime - 2000;
+        this.rhythmHistory = this.rhythmHistory.filter(entry => entry.time > twoSecondsAgo);
+        
+        if (this.rhythmHistory.length < 10) {
+            return 0; // Not enough data for rhythm analysis
+        }
+        
+        // Look for rhythmic patterns in the energy data
+        const recentEnergies = this.rhythmHistory.slice(-20).map(entry => entry.energy);
+        const meanEnergy = recentEnergies.reduce((a, b) => a + b, 0) / recentEnergies.length;
+        
+        // Calculate energy variations (peaks and valleys)
+        let peaks = 0;
+        let valleys = 0;
+        let totalVariation = 0;
+        
+        for (let i = 1; i < recentEnergies.length - 1; i++) {
+            const prev = recentEnergies[i - 1];
+            const curr = recentEnergies[i];
+            const next = recentEnergies[i + 1];
+            
+            // Peak detection
+            if (curr > prev && curr > next && curr > meanEnergy * 1.1) {
+                peaks++;
+            }
+            
+            // Valley detection
+            if (curr < prev && curr < next && curr < meanEnergy * 0.9) {
+                valleys++;
+            }
+            
+            // Total variation
+            totalVariation += Math.abs(curr - prev);
+        }
+        
+        // Calculate rhythm confidence based on pattern regularity
+        const expectedBeats = Math.max(1, Math.floor((currentTime - this.rhythmHistory[0].time) / 500)); // Expect beats every 500ms or faster
+        const peakRatio = peaks / Math.max(1, expectedBeats);
+        const variationRatio = totalVariation / recentEnergies.length / meanEnergy;
+        
+        // Rhythm confidence: higher when we have regular peaks and good variation
+        let rhythmConfidence = 0;
+        
+        // Peak regularity (0-0.4)
+        if (peakRatio > 0.5 && peakRatio < 2.0) {
+            rhythmConfidence += 0.4;
+        }
+        
+        // Energy variation (0-0.3)
+        if (variationRatio > 0.1 && variationRatio < 1.0) {
+            rhythmConfidence += 0.3;
+        }
+        
+        // Beat timing consistency (0-0.3)
+        if (this.beatHistory.length >= 3) {
+            const recentBeats = this.beatHistory.slice(-5);
+            const intervals = [];
+            for (let i = 1; i < recentBeats.length; i++) {
+                intervals.push(recentBeats[i] - recentBeats[i - 1]);
+            }
+            
+            if (intervals.length > 0) {
+                const avgInterval = intervals.reduce((a, b) => a + b, 0) / intervals.length;
+                const intervalVariance = intervals.reduce((a, b) => a + Math.pow(b - avgInterval, 2), 0) / intervals.length;
+                const consistency = Math.max(0, 1 - (Math.sqrt(intervalVariance) / avgInterval));
+                rhythmConfidence += consistency * 0.3;
+            }
+        }
+        
+        return Math.min(1, rhythmConfidence);
     }
     
     getDetectionThresholds() {
@@ -405,7 +623,6 @@ class MicrophoneInput {
         const intervals = [];
         for (let i = 1; i < this.beatHistory.length; i++) {
             const interval = this.beatHistory[i] - this.beatHistory[i - 1];
-            console.log(`Interval ${i}: ${interval}ms (min: ${this.minBeatInterval}, max: ${this.maxBeatInterval})`);
             if (interval >= this.minBeatInterval && interval <= this.maxBeatInterval) {
                 intervals.push(interval);
             }
@@ -418,29 +635,50 @@ class MicrophoneInput {
             return;
         }
         
-        // Calculate average interval
-        const avgInterval = intervals.reduce((sum, interval) => sum + interval, 0) / intervals.length;
+        // Use median instead of average for more robust tempo calculation
+        const sortedIntervals = intervals.sort((a, b) => a - b);
+        const medianInterval = sortedIntervals[Math.floor(sortedIntervals.length / 2)];
         
         // Convert to BPM
-        const newTempo = Math.round(60000 / avgInterval);
+        let newTempo = Math.round(60000 / medianInterval);
         
-        console.log(`Calculated tempo: ${newTempo} BPM (avg interval: ${avgInterval.toFixed(1)}ms)`);
+        // Handle very fast tempos by looking for half-time patterns
+        if (newTempo > 200) {
+            // Check if this might be a half-time pattern (double the interval)
+            const doubleInterval = medianInterval * 2;
+            const halfTimeTempo = Math.round(60000 / doubleInterval);
+            
+            // If half-time tempo is more reasonable, use it
+            if (halfTimeTempo >= 60 && halfTimeTempo <= 200) {
+                newTempo = halfTimeTempo;
+                console.log(`Detected half-time pattern: ${newTempo} BPM (was ${Math.round(60000 / medianInterval)} BPM)`);
+            }
+        }
+        
+        console.log(`Calculated tempo: ${newTempo} BPM (median interval: ${medianInterval.toFixed(1)}ms)`);
         
         // Validate tempo range
         if (newTempo >= 30 && newTempo <= 300) {
             // Add to tempo history
             this.tempoHistory.push(newTempo);
             
-            // Keep only recent tempos (last 5 calculations)
-            if (this.tempoHistory.length > 5) {
+            // Keep only recent tempos (last 8 calculations for better stability)
+            if (this.tempoHistory.length > 8) {
                 this.tempoHistory.shift();
             }
             
-            // Calculate average tempo
-            const avgTempo = this.tempoHistory.reduce((sum, tempo) => sum + tempo, 0) / this.tempoHistory.length;
-            this.detectedTempo = Math.round(avgTempo);
+            // Calculate weighted average tempo (more recent tempos have higher weight)
+            let weightedSum = 0;
+            let totalWeight = 0;
+            this.tempoHistory.forEach((tempo, index) => {
+                const weight = index + 1; // More recent = higher weight
+                weightedSum += tempo * weight;
+                totalWeight += weight;
+            });
             
-            console.log(`Final tempo: ${this.detectedTempo} BPM (from ${this.tempoHistory.length} calculations)`);
+            this.detectedTempo = Math.round(weightedSum / totalWeight);
+            
+            console.log(`Final tempo: ${this.detectedTempo} BPM (weighted average from ${this.tempoHistory.length} calculations)`);
             
             // Calculate confidence based on consistency
             this.calculateConfidence();
@@ -472,10 +710,9 @@ class MicrophoneInput {
     
     // Sensitivity control methods
     setSensitivity(sensitivity) {
-        // Convert sensitivity (0-100) to threshold (0.1-0.9)
-        // Higher sensitivity = lower threshold (more sensitive)
-        this.beatThreshold = 0.9 - (sensitivity / 100) * 0.8;
-        console.log(`Sensitivity set to ${sensitivity}% (threshold: ${this.beatThreshold.toFixed(2)})`);
+        // Store sensitivity value (0-100) for use in adaptive threshold calculation
+        this.sensitivity = Math.max(0, Math.min(100, sensitivity));
+        console.log(`Sensitivity set to ${this.sensitivity}%`);
     }
     
     setMinBeatInterval(interval) {
@@ -490,12 +727,12 @@ class MicrophoneInput {
     
     // Detection mode control
     setDetectionMode(mode) {
-        if (['bass', 'drums', 'guitar', 'mixed'].includes(mode)) {
+        if (['drums', 'guitar', 'other'].includes(mode)) {
             this.detectionMode = mode;
             console.log(`Detection mode set to: ${mode}`);
         } else {
-            console.warn(`Invalid detection mode: ${mode}. Using 'mixed' instead.`);
-            this.detectionMode = 'mixed';
+            console.warn(`Invalid detection mode: ${mode}. Using 'other' instead.`);
+            this.detectionMode = 'other';
         }
     }
     
