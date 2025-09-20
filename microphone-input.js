@@ -173,6 +173,11 @@ class MicrophoneInput {
     }
     
     calculateAverageVolume() {
+        // Safety check for frequency data
+        if (!this.frequencyData || !this.bufferLength) {
+            return 0;
+        }
+        
         let sum = 0;
         for (let i = 0; i < this.bufferLength; i++) {
             sum += this.frequencyData[i];
@@ -181,6 +186,11 @@ class MicrophoneInput {
     }
     
     calculateFrequencyVolume() {
+        // Safety check for frequency data
+        if (!this.frequencyData || !this.bufferLength) {
+            return 0;
+        }
+        
         const range = this.frequencyRanges[this.detectionMode] || this.frequencyRanges.mixed;
         
         // Safety check for range
