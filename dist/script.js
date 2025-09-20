@@ -748,19 +748,6 @@ class UIController {
             });
         }
 
-        // Space bar support for metronome control
-        document.addEventListener('keydown', (e) => {
-            // Check if space bar is pressed
-            if (e.code === 'Space' || e.keyCode === 32) {
-                // Prevent default space bar behavior (page scrolling)
-                e.preventDefault();
-                
-                // Toggle metronome playback
-                this.core.togglePlayback();
-                this.updateDisplay();
-                this.updateMetronomeButtons();
-            }
-        });
         
         // Initialize display mode and beat generation
         this.updateDisplayMode();
@@ -921,6 +908,32 @@ class UIController {
                 this.core.audioManager.audioContext.resume();
             }
         }, { once: true });
+
+        // Space bar support for metronome control (moved here for better production reliability)
+        const handleSpaceBar = (e) => {
+            // Check if space bar is pressed
+            if (e.code === 'Space' || e.keyCode === 32 || e.key === ' ') {
+                // Prevent default space bar behavior (page scrolling)
+                e.preventDefault();
+                e.stopPropagation();
+                
+                console.log('Space bar pressed - toggling metronome');
+                
+                // Toggle metronome playback
+                this.core.togglePlayback();
+                this.updateDisplay();
+                this.updateMetronomeButtons();
+                
+                return false;
+            }
+        };
+
+        // Add event listener with multiple methods for better compatibility
+        document.addEventListener('keydown', handleSpaceBar, true);
+        window.addEventListener('keydown', handleSpaceBar, true);
+        
+        // Also add to body for extra coverage
+        document.body.addEventListener('keydown', handleSpaceBar, true);
     }
     
     setupDragAndDrop() {
