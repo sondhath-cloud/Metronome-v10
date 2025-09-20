@@ -43,7 +43,7 @@ class MicrophoneInput {
         
         // Onset detection
         this.previousSpectrum = null;
-        this.onsetThreshold = 0.1; // Lower default threshold
+        this.onsetThreshold = 0.05; // Much lower default threshold
         this.spectralCentroid = 0;
         this.zeroCrossingRate = 0;
         
@@ -129,12 +129,16 @@ class MicrophoneInput {
     }
     
     stopListening() {
+        console.log('stopListening() called - stack trace:', new Error().stack);
         this.isListening = false;
         console.log('Stopped listening for beats');
     }
     
     analyzeAudio() {
-        if (!this.isListening) return;
+        if (!this.isListening) {
+            console.log('Audio analysis stopped - isListening is false');
+            return;
+        }
         
         // Get frequency and time domain data
         this.analyser.getByteFrequencyData(this.frequencyData);
@@ -204,7 +208,7 @@ class MicrophoneInput {
         this.previousSpectrum = Array.from(this.frequencyData);
         
         // Scale up the onset strength for better detection
-        return (onsetSum / this.bufferLength / 255) * 10; // Scale up by 10x
+        return (onsetSum / this.bufferLength / 255) * 50; // Scale up by 50x for much better detection
     }
     
     calculateSpectralCentroid() {
@@ -334,10 +338,10 @@ class MicrophoneInput {
             case 'guitar':
                 return {
                     ...baseThresholds,
-                    volume: this.beatThreshold * 0.7, // More lenient
-                    frequency: this.beatThreshold * 0.6, // More lenient
-                    onset: this.onsetThreshold * 0.3, // Much more lenient
-                    volumeIncrease: 1.05 // More lenient
+                    volume: this.beatThreshold * 0.5, // Very lenient
+                    frequency: this.beatThreshold * 0.4, // Very lenient
+                    onset: this.onsetThreshold * 0.1, // Extremely lenient
+                    volumeIncrease: 1.02 // Very lenient
                 };
             default: // mixed
                 return baseThresholds;
