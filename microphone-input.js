@@ -38,7 +38,8 @@ class MicrophoneInput {
             kick: { low: 20, high: 40 },     // 80-160 Hz  
             snare: { low: 40, high: 80 },    // 160-320 Hz
             guitar: { low: 80, high: 160 },  // 320-640 Hz
-            cymbals: { low: 160, high: 320 } // 640-1280 Hz
+            cymbals: { low: 160, high: 320 }, // 640-1280 Hz
+            mixed: { low: 0, high: 160 }     // Full range for mixed mode
         };
         
         // Onset detection
@@ -181,6 +182,13 @@ class MicrophoneInput {
     
     calculateFrequencyVolume() {
         const range = this.frequencyRanges[this.detectionMode] || this.frequencyRanges.mixed;
+        
+        // Safety check for range
+        if (!range || typeof range.low === 'undefined' || typeof range.high === 'undefined') {
+            console.warn(`Invalid frequency range for detection mode: ${this.detectionMode}`);
+            return 0;
+        }
+        
         let sum = 0;
         let count = 0;
         
