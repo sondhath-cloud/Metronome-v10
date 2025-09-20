@@ -43,7 +43,7 @@ class MicrophoneInput {
         
         // Onset detection
         this.previousSpectrum = null;
-        this.onsetThreshold = 0.3;
+        this.onsetThreshold = 0.1; // Lower default threshold
         this.spectralCentroid = 0;
         this.zeroCrossingRate = 0;
         
@@ -153,7 +153,8 @@ class MicrophoneInput {
         
         // Debug logging (remove after testing)
         if (Math.random() < 0.01) { // Log 1% of the time to avoid spam
-            console.log(`Audio: Vol=${averageVolume.toFixed(3)}, FreqVol=${frequencyVolume.toFixed(3)}, Onset=${onsetStrength.toFixed(3)}, Centroid=${spectralCentroid.toFixed(1)}`);
+            const thresholds = this.getDetectionThresholds();
+            console.log(`Audio: Vol=${averageVolume.toFixed(3)}/${thresholds.volume.toFixed(3)}, FreqVol=${frequencyVolume.toFixed(3)}/${thresholds.frequency.toFixed(3)}, Onset=${onsetStrength.toFixed(3)}/${thresholds.onset.toFixed(3)}, Centroid=${spectralCentroid.toFixed(1)}`);
         }
         
         // Detect beat using enhanced method
@@ -202,7 +203,8 @@ class MicrophoneInput {
         // Store current spectrum for next calculation
         this.previousSpectrum = Array.from(this.frequencyData);
         
-        return onsetSum / this.bufferLength / 255; // Normalize to 0-1
+        // Scale up the onset strength for better detection
+        return (onsetSum / this.bufferLength / 255) * 10; // Scale up by 10x
     }
     
     calculateSpectralCentroid() {
@@ -332,10 +334,10 @@ class MicrophoneInput {
             case 'guitar':
                 return {
                     ...baseThresholds,
-                    volume: this.beatThreshold * 0.9,
-                    frequency: this.beatThreshold * 0.8,
-                    onset: this.onsetThreshold * 0.8,
-                    volumeIncrease: 1.15
+                    volume: this.beatThreshold * 0.7, // More lenient
+                    frequency: this.beatThreshold * 0.6, // More lenient
+                    onset: this.onsetThreshold * 0.3, // Much more lenient
+                    volumeIncrease: 1.05 // More lenient
                 };
             default: // mixed
                 return baseThresholds;
