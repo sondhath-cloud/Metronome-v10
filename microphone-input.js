@@ -285,61 +285,39 @@ class MicrophoneInput {
             return false;
         }
         
-        // Get detection thresholds based on mode
-        const thresholds = this.getDetectionThresholds();
+        // Simple energy-based detection (proven approach from successful apps)
+        // This is much more reliable than complex frequency analysis
         
-        // Much more sensitive detection - use multiple approaches
-        let beatDetected = false;
-        let detectionMethod = '';
-        
-        // Method 1: Simple volume threshold (most reliable)
-        if (volume > thresholds.volume) {
-            beatDetected = true;
-            detectionMethod = 'volume';
-        }
-        
-        // Method 2: Volume increase detection (catches sudden changes)
-        const recentVolumes = this.beatHistory.slice(-5);
-        if (recentVolumes.length >= 2) {
-            const avgRecentVolume = recentVolumes.reduce((a, b) => a + b, 0) / recentVolumes.length;
-            const volumeIncrease = volume / (avgRecentVolume + 0.001);
-            
-            if (volumeIncrease > 1.5) { // 50% increase
-                beatDetected = true;
-                detectionMethod = 'volume-increase';
+        // Calculate energy (RMS) from the time domain data
+        let energy = 0;
+        if (this.timeData && this.bufferLength) {
+            for (let i = 0; i < this.bufferLength; i++) {
+                const sample = (this.timeData[i] - 128) / 128; // Normalize to -1 to 1
+                energy += sample * sample;
             }
+            energy = Math.sqrt(energy / this.bufferLength);
         }
         
-        // Method 3: Frequency-based detection (for specific instruments)
-        if (frequencyVolume > thresholds.frequency) {
-            beatDetected = true;
-            detectionMethod = 'frequency';
+        // Adaptive threshold based on recent energy levels
+        this.energyHistory = this.energyHistory || [];
+        this.energyHistory.push(energy);
+        
+        // Keep only last 20 energy readings
+        if (this.energyHistory.length > 20) {
+            this.energyHistory.shift();
         }
         
-        // Method 4: Onset detection (for percussive sounds)
-        if (onsetStrength > thresholds.onset) {
-            beatDetected = true;
-            detectionMethod = 'onset';
-        }
+        // Calculate average energy over time
+        const avgEnergy = this.energyHistory.reduce((a, b) => a + b, 0) / this.energyHistory.length;
         
-        // Method 5: Combined approach (any two methods)
-        let methodCount = 0;
-        if (volume > thresholds.volume) methodCount++;
-        if (frequencyVolume > thresholds.frequency) methodCount++;
-        if (onsetStrength > thresholds.onset) methodCount++;
-        if (recentVolumes.length >= 2) {
-            const avgRecentVolume = recentVolumes.reduce((a, b) => a + b, 0) / recentVolumes.length;
-            const volumeIncrease = volume / (avgRecentVolume + 0.001);
-            if (volumeIncrease > 1.3) methodCount++;
-        }
+        // Dynamic threshold: 1.5x average energy + small base threshold
+        const dynamicThreshold = Math.max(avgEnergy * 1.5, 0.01);
         
-        if (methodCount >= 2) {
-            beatDetected = true;
-            detectionMethod = 'combined';
-        }
+        // Beat detected if current energy exceeds dynamic threshold
+        const beatDetected = energy > dynamicThreshold;
         
         if (beatDetected) {
-            console.log(`Beat detected! Method: ${detectionMethod}, Vol=${volume.toFixed(3)}/${thresholds.volume.toFixed(3)}, Freq=${frequencyVolume.toFixed(3)}/${thresholds.frequency.toFixed(3)}, Onset=${onsetStrength.toFixed(3)}/${thresholds.onset.toFixed(3)}`);
+            console.log(`Beat detected! Energy=${energy.toFixed(4)} > ${dynamicThreshold.toFixed(4)} (avg=${avgEnergy.toFixed(4)})`);
         }
         
         return beatDetected;
