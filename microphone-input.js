@@ -14,7 +14,7 @@ class MicrophoneInput {
         this.beatHistory = [];
         this.lastBeatTime = 0;
         this.beatThreshold = 0.1; // Will be calculated from sensitivity slider
-        this.minBeatInterval = 100; // Minimum time between beats (ms) - allows up to 600 BPM
+        this.minBeatInterval = 200; // Minimum time between beats (ms) - allows up to 300 BPM
         this.maxBeatInterval = 2000; // Maximum time between beats (ms)
         
         // Tempo calculation
@@ -310,14 +310,15 @@ class MicrophoneInput {
         // Calculate average energy over time
         const avgEnergy = this.energyHistory.reduce((a, b) => a + b, 0) / this.energyHistory.length;
         
-        // Dynamic threshold: 1.5x average energy + small base threshold
-        const dynamicThreshold = Math.max(avgEnergy * 1.5, 0.01);
+        // Dynamic threshold: 2.0x average energy + small base threshold (less sensitive)
+        const dynamicThreshold = Math.max(avgEnergy * 2.0, 0.02);
         
         // Beat detected if current energy exceeds dynamic threshold
         const beatDetected = energy > dynamicThreshold;
         
         if (beatDetected) {
-            console.log(`Beat detected! Energy=${energy.toFixed(4)} > ${dynamicThreshold.toFixed(4)} (avg=${avgEnergy.toFixed(4)})`);
+            const timeSinceLastBeat = now - this.lastBeatTime;
+            console.log(`Beat detected! Energy=${energy.toFixed(4)} > ${dynamicThreshold.toFixed(4)} (avg=${avgEnergy.toFixed(4)}) - Time since last: ${timeSinceLastBeat}ms`);
         }
         
         return beatDetected;
