@@ -278,54 +278,61 @@ class MicrophoneInput {
         // Get detection thresholds based on mode
         const thresholds = this.getDetectionThresholds();
         
-        // For guitar mode, use a much simpler approach - just check volume
-        if (this.detectionMode === 'guitar') {
-            // Just check if volume is above threshold
-            if (volume > thresholds.volume) {
-                console.log(`Guitar beat detected! Vol=${volume.toFixed(3)} > ${thresholds.volume.toFixed(3)}`);
-                return true;
-            }
-            return false;
+        // Much more sensitive detection - use multiple approaches
+        let beatDetected = false;
+        let detectionMethod = '';
+        
+        // Method 1: Simple volume threshold (most reliable)
+        if (volume > thresholds.volume) {
+            beatDetected = true;
+            detectionMethod = 'volume';
         }
         
-        // For other modes, use the original logic
-        // Check volume threshold
-        if (volume < thresholds.volume) {
-            return false;
-        }
-        
-        // Check frequency-specific volume
-        if (frequencyVolume < thresholds.frequency) {
-            return false;
-        }
-        
-        // Check onset strength for percussive detection
-        if (onsetStrength < thresholds.onset) {
-            return false;
-        }
-        
-        // For sustained instruments (like bass), be more lenient
-        if (this.detectionMode === 'bass' && volume > 0.3) {
-            return true;
-        }
-        
-        // For percussive instruments, require strong onset
-        if (this.detectionMode === 'drums' && onsetStrength < 0.4) {
-            return false;
-        }
-        
-        // Check for significant volume increase
-        const recentVolumes = this.beatHistory.slice(-3);
-        if (recentVolumes.length > 0) {
+        // Method 2: Volume increase detection (catches sudden changes)
+        const recentVolumes = this.beatHistory.slice(-5);
+        if (recentVolumes.length >= 2) {
             const avgRecentVolume = recentVolumes.reduce((a, b) => a + b, 0) / recentVolumes.length;
-            const volumeIncrease = volume / (avgRecentVolume + 0.001); // Avoid division by zero
+            const volumeIncrease = volume / (avgRecentVolume + 0.001);
             
-            if (volumeIncrease < thresholds.volumeIncrease) {
-                return false;
+            if (volumeIncrease > 1.5) { // 50% increase
+                beatDetected = true;
+                detectionMethod = 'volume-increase';
             }
         }
         
-        return true;
+        // Method 3: Frequency-based detection (for specific instruments)
+        if (frequencyVolume > thresholds.frequency) {
+            beatDetected = true;
+            detectionMethod = 'frequency';
+        }
+        
+        // Method 4: Onset detection (for percussive sounds)
+        if (onsetStrength > thresholds.onset) {
+            beatDetected = true;
+            detectionMethod = 'onset';
+        }
+        
+        // Method 5: Combined approach (any two methods)
+        let methodCount = 0;
+        if (volume > thresholds.volume) methodCount++;
+        if (frequencyVolume > thresholds.frequency) methodCount++;
+        if (onsetStrength > thresholds.onset) methodCount++;
+        if (recentVolumes.length >= 2) {
+            const avgRecentVolume = recentVolumes.reduce((a, b) => a + b, 0) / recentVolumes.length;
+            const volumeIncrease = volume / (avgRecentVolume + 0.001);
+            if (volumeIncrease > 1.3) methodCount++;
+        }
+        
+        if (methodCount >= 2) {
+            beatDetected = true;
+            detectionMethod = 'combined';
+        }
+        
+        if (beatDetected) {
+            console.log(`Beat detected! Method: ${detectionMethod}, Vol=${volume.toFixed(3)}/${thresholds.volume.toFixed(3)}, Freq=${frequencyVolume.toFixed(3)}/${thresholds.frequency.toFixed(3)}, Onset=${onsetStrength.toFixed(3)}/${thresholds.onset.toFixed(3)}`);
+        }
+        
+        return beatDetected;
     }
     
     getDetectionThresholds() {
@@ -357,13 +364,19 @@ class MicrophoneInput {
             case 'guitar':
                 return {
                     ...baseThresholds,
-                    volume: this.beatThreshold * 0.3, // Extremely lenient - just volume
-                    frequency: this.beatThreshold * 0.4, // Not used for guitar
-                    onset: this.onsetThreshold * 0.1, // Not used for guitar
+                    volume: this.beatThreshold * 0.15, // Super sensitive - 15% of sensitivity
+                    frequency: this.beatThreshold * 0.2, // Very sensitive
+                    onset: this.onsetThreshold * 0.05, // Extremely sensitive
                     volumeIncrease: 1.02 // Not used for guitar
                 };
             default: // mixed
-                return baseThresholds;
+                return {
+                    ...baseThresholds,
+                    volume: this.beatThreshold * 0.2, // More sensitive
+                    frequency: this.beatThreshold * 0.3, // More sensitive
+                    onset: this.onsetThreshold * 0.1, // More sensitive
+                    volumeIncrease: 1.1 // More sensitive
+                };
         }
     }
     
