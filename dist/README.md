@@ -18,8 +18,9 @@ This is a complete, self-contained metronome application with advanced features 
 
 ## Installation
 1. Download all files in this folder
-2. Open `index.html` in a web browser
-3. Grant microphone permissions when prompted (for voice commands and tempo detection)
+2. Upload to your web server root directory
+3. Open `index.html` in a web browser
+4. Grant microphone permissions when prompted (for voice commands and tempo detection)
 
 ## Browser Requirements
 - Modern web browser with JavaScript enabled
@@ -35,9 +36,8 @@ dist/
 ├── audio-manager.js    # Audio system and TTS
 ├── microphone-input.js # Microphone tempo detection
 ├── audio/              # Audio files for count-in
-│   └── audio/
-│       ├── countin-accent.mp3
-│       └── countin-beat.mp3
+│   ├── countin-accent.mp3
+│   └── countin-beat.mp3
 └── README.md           # This file
 ```
 
