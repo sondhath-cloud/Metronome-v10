@@ -3,12 +3,17 @@
 
 class MetronomeCore {
     constructor() {
-        // Core timing properties
-        this.isPlaying = false;
-        this.tempo = 120;
-        this.beatsPerBar = 4;
-        this.currentBeat = 1;
-        this.intervalId = null;
+    // Core timing properties
+    this.isPlaying = false;
+    this.tempo = 120;
+    this.beatsPerBar = 4;
+    this.currentBeat = 1;
+    this.intervalId = null;
+    
+    // Web Audio API timing properties for precise scheduling
+    this.nextScheduledTime = 0;
+    this.scheduledEvents = [];
+    this.timingPrecision = 0.025; // 25ms lookahead for scheduling
         
         // Audio system
         this.audioManager = null;
@@ -65,6 +70,30 @@ class MetronomeCore {
         
         // Display
         this.displayMode = 'circle';
+        
+        // Audio focus and visibility handling
+        this.isPageVisible = true;
+        this.wasPlayingBeforeHidden = false;
+        this.audioFocusHandlers = {
+            visibilityChange: null,
+            pageShow: null,
+            pageHide: null,
+            beforeUnload: null
+        };
+        
+        // Performance monitoring
+        this.performanceMonitor = {
+            isEnabled: true,
+            checkInterval: 5000, // Check every 5 seconds
+            monitorId: null,
+            lastCheckTime: 0,
+            performanceHistory: [],
+            maxHistoryLength: 20,
+            cpuThreshold: 80, // CPU usage threshold (%)
+            memoryThreshold: 100 * 1024 * 1024, // Memory threshold (100MB)
+            audioDropoutCount: 0,
+            lastAudioTime: 0
+        };
     }
     
     async init() {
@@ -73,6 +102,8 @@ class MetronomeCore {
         
         await this.setupAudioManager();
         await this.setupMicrophoneInput();
+        this.setupAudioFocusHandling();
+        this.startPerformanceMonitoring();
         console.log('MetronomeCore initialized');
     }
     
@@ -118,6 +149,228 @@ class MetronomeCore {
         };
         
         console.log('Microphone input ready (permission not requested by default)');
+    }
+    
+    setupAudioFocusHandling() {
+        // Handle page visibility changes
+        this.audioFocusHandlers.visibilityChange = () => {
+            if (document.hidden) {
+                this.handlePageHidden();
+            } else {
+                this.handlePageVisible();
+            }
+        };
+        
+        // Handle page show/hide events (for mobile)
+        this.audioFocusHandlers.pageShow = () => {
+            this.handlePageVisible();
+        };
+        
+        this.audioFocusHandlers.pageHide = () => {
+            this.handlePageHidden();
+        };
+        
+        // Handle before unload
+        this.audioFocusHandlers.beforeUnload = () => {
+            this.handlePageUnload();
+        };
+        
+        // Add event listeners
+        document.addEventListener('visibilitychange', this.audioFocusHandlers.visibilityChange);
+        window.addEventListener('pageshow', this.audioFocusHandlers.pageShow);
+        window.addEventListener('pagehide', this.audioFocusHandlers.pageHide);
+        window.addEventListener('beforeunload', this.audioFocusHandlers.beforeUnload);
+        
+        // Handle focus/blur for additional mobile support
+        window.addEventListener('focus', () => this.handlePageVisible());
+        window.addEventListener('blur', () => this.handlePageHidden());
+        
+        console.log('Audio focus handling initialized');
+    }
+    
+    handlePageHidden() {
+        console.log('Page hidden - pausing metronome');
+        this.isPageVisible = false;
+        
+        if (this.isPlaying) {
+            this.wasPlayingBeforeHidden = true;
+            this.stop();
+        }
+        
+        // Pause audio context to save resources
+        if (this.audioManager && this.audioManager.audioContext) {
+            this.audioManager.audioContext.suspend();
+        }
+    }
+    
+    handlePageVisible() {
+        console.log('Page visible - resuming metronome if needed');
+        this.isPageVisible = true;
+        
+        // Resume audio context
+        if (this.audioManager && this.audioManager.audioContext) {
+            this.audioManager.audioContext.resume();
+        }
+        
+        // Resume metronome if it was playing before
+        if (this.wasPlayingBeforeHidden) {
+            this.wasPlayingBeforeHidden = false;
+            // Small delay to ensure audio context is ready
+            setTimeout(() => {
+                this.start();
+            }, 100);
+        }
+    }
+    
+    handlePageUnload() {
+        console.log('Page unloading - cleaning up');
+        this.stop();
+        
+        // Clean up audio focus handlers
+        this.cleanupAudioFocusHandling();
+        
+        // Stop performance monitoring
+        this.stopPerformanceMonitoring();
+    }
+    
+    cleanupAudioFocusHandling() {
+        document.removeEventListener('visibilitychange', this.audioFocusHandlers.visibilityChange);
+        window.removeEventListener('pageshow', this.audioFocusHandlers.pageShow);
+        window.removeEventListener('pagehide', this.audioFocusHandlers.pageHide);
+        window.removeEventListener('beforeunload', this.audioFocusHandlers.beforeUnload);
+        window.removeEventListener('focus', () => this.handlePageVisible());
+        window.removeEventListener('blur', () => this.handlePageHidden());
+    }
+    
+    startPerformanceMonitoring() {
+        if (!this.performanceMonitor.isEnabled) return;
+        
+        this.performanceMonitor.monitorId = setInterval(() => {
+            this.checkPerformance();
+        }, this.performanceMonitor.checkInterval);
+        
+        console.log('Performance monitoring started');
+    }
+    
+    stopPerformanceMonitoring() {
+        if (this.performanceMonitor.monitorId) {
+            clearInterval(this.performanceMonitor.monitorId);
+            this.performanceMonitor.monitorId = null;
+        }
+    }
+    
+    checkPerformance() {
+        const now = performance.now();
+        const performanceData = {
+            timestamp: now,
+            memory: this.getMemoryUsage(),
+            timing: this.getTimingData(),
+            audioContext: this.getAudioContextStatus()
+        };
+        
+        // Add to history
+        this.performanceMonitor.performanceHistory.push(performanceData);
+        if (this.performanceMonitor.performanceHistory.length > this.performanceMonitor.maxHistoryLength) {
+            this.performanceMonitor.performanceHistory.shift();
+        }
+        
+        // Check for performance issues
+        this.analyzePerformance(performanceData);
+        
+        this.performanceMonitor.lastCheckTime = now;
+    }
+    
+    getMemoryUsage() {
+        if (performance.memory) {
+            return {
+                used: performance.memory.usedJSHeapSize,
+                total: performance.memory.totalJSHeapSize,
+                limit: performance.memory.jsHeapSizeLimit
+            };
+        }
+        return null;
+    }
+    
+    getTimingData() {
+        const now = performance.now();
+        const timing = {
+            currentTime: now,
+            timeSinceLastCheck: now - this.performanceMonitor.lastCheckTime,
+            audioDropoutCount: this.performanceMonitor.audioDropoutCount
+        };
+        
+        // Reset dropout count
+        this.performanceMonitor.audioDropoutCount = 0;
+        
+        return timing;
+    }
+    
+    getAudioContextStatus() {
+        if (this.audioManager && this.audioManager.audioContext) {
+            return {
+                state: this.audioManager.audioContext.state,
+                sampleRate: this.audioManager.audioContext.sampleRate,
+                currentTime: this.audioManager.audioContext.currentTime
+            };
+        }
+        return null;
+    }
+    
+    analyzePerformance(performanceData) {
+        const issues = [];
+        
+        // Check memory usage
+        if (performanceData.memory) {
+            const memoryUsage = performanceData.memory.used / (1024 * 1024); // Convert to MB
+            if (memoryUsage > this.performanceMonitor.memoryThreshold / (1024 * 1024)) {
+                issues.push(`High memory usage: ${memoryUsage.toFixed(1)}MB`);
+            }
+        }
+        
+        // Check timing issues
+        if (performanceData.timing.timeSinceLastCheck > this.performanceMonitor.checkInterval * 1.5) {
+            issues.push('Timing delay detected - possible CPU throttling');
+        }
+        
+        // Check audio context issues
+        if (performanceData.audioContext && performanceData.audioContext.state !== 'running') {
+            issues.push(`Audio context not running: ${performanceData.audioContext.state}`);
+        }
+        
+        // Check for audio dropouts
+        if (performanceData.timing.audioDropoutCount > 0) {
+            issues.push(`${performanceData.timing.audioDropoutCount} audio dropouts detected`);
+        }
+        
+        // Log issues if any
+        if (issues.length > 0) {
+            console.warn('Performance issues detected:', issues);
+            this.handlePerformanceIssues(issues);
+        }
+    }
+    
+    handlePerformanceIssues(issues) {
+        // Reduce audio quality or complexity if performance is poor
+        if (issues.some(issue => issue.includes('memory') || issue.includes('CPU'))) {
+            console.log('Reducing audio quality due to performance issues');
+            // Could reduce sample rate, buffer size, or disable some features
+        }
+        
+        // Try to recover audio context if it's not running
+        if (issues.some(issue => issue.includes('Audio context'))) {
+            if (this.audioManager) {
+                this.audioManager.ensureAudioContextReady();
+            }
+        }
+    }
+    
+    recordAudioEvent() {
+        this.performanceMonitor.lastAudioTime = performance.now();
+    }
+    
+    recordAudioDropout() {
+        this.performanceMonitor.audioDropoutCount++;
+        console.warn('Audio dropout detected');
     }
     
     // Settings persistence
@@ -203,6 +456,14 @@ class MetronomeCore {
         this.currentSubdivision = 0;
         this.resetPattern();
         
+        // Ensure audio context is running
+        if (this.audioManager && this.audioManager.audioContext) {
+            if (this.audioManager.audioContext.state === 'suspended') {
+                this.audioManager.audioContext.resume();
+            }
+        }
+        
+        // Calculate timing intervals
         const baseInterval = (60 / this.tempo) * 1000;
         
         // Determine subdivision interval based on current subdivision setting
@@ -219,6 +480,9 @@ class MetronomeCore {
                 break;
         }
         
+        // Convert to seconds for Web Audio API
+        this.subdivisionIntervalSeconds = subdivisionInterval / 1000;
+        
         // Play first beat immediately
         this.playBeat();
         
@@ -227,10 +491,8 @@ class MetronomeCore {
             this.onBeatChange();
         }
         
-        // Set up interval for subdivisions
-        this.intervalId = setInterval(() => {
-            this.nextSubdivision();
-        }, subdivisionInterval);
+        // Start Web Audio API scheduling instead of setInterval
+        this.startAudioScheduling();
         
         console.log('Metronome started at', this.tempo, 'BPM with', this.subdivision, 'subdivisions');
     }
@@ -242,10 +504,14 @@ class MetronomeCore {
         this.currentBeat = 1;
         this.currentSubdivision = 0;
         
+        // Stop both interval and audio scheduling
         if (this.intervalId) {
             clearInterval(this.intervalId);
             this.intervalId = null;
         }
+        
+        // Clear scheduled audio events
+        this.scheduledEvents = [];
         
         // Update UI when stopped
         if (this.onBeatChange) {
@@ -253,6 +519,100 @@ class MetronomeCore {
         }
         
         console.log('Metronome stopped');
+    }
+    
+    // Web Audio API scheduling for precise timing
+    startAudioScheduling() {
+        if (!this.audioManager || !this.audioManager.audioContext) {
+            console.warn('Audio context not available, falling back to setInterval');
+            this.startFallbackTiming();
+            return;
+        }
+        
+        const audioContext = this.audioManager.audioContext;
+        const currentTime = audioContext.currentTime;
+        
+        // Schedule events for the next 2 seconds
+        this.scheduleNextEvents(currentTime);
+        
+        // Set up the scheduling loop
+        this.schedulingInterval = setInterval(() => {
+            if (!this.isPlaying) {
+                clearInterval(this.schedulingInterval);
+                return;
+            }
+            
+            const now = audioContext.currentTime;
+            this.scheduleNextEvents(now);
+        }, this.timingPrecision * 1000); // Check every 25ms
+    }
+    
+    scheduleNextEvents(currentTime) {
+        if (!this.audioManager || !this.audioManager.audioContext) return;
+        
+        const audioContext = this.audioManager.audioContext;
+        const lookahead = 2.0; // Schedule 2 seconds ahead
+        const endTime = currentTime + lookahead;
+        
+        // Find the next subdivision time
+        let nextTime = this.nextScheduledTime;
+        if (nextTime === 0) {
+            nextTime = currentTime + this.subdivisionIntervalSeconds;
+        }
+        
+        // Schedule events up to the lookahead time
+        while (nextTime < endTime) {
+            // Schedule the beat event
+            this.scheduleBeatEvent(nextTime);
+            
+            // Move to next subdivision
+            nextTime += this.subdivisionIntervalSeconds;
+        }
+        
+        this.nextScheduledTime = nextTime;
+    }
+    
+    scheduleBeatEvent(scheduledTime) {
+        if (!this.audioManager || !this.audioManager.audioContext) return;
+        
+        const audioContext = this.audioManager.audioContext;
+        
+        // Schedule the audio
+        if (this.audioManager.audioContext) {
+            const now = audioContext.currentTime;
+            const delay = Math.max(0, scheduledTime - now);
+            
+            // Schedule the beat sound
+            setTimeout(() => {
+                if (this.isPlaying) {
+                    this.nextSubdivision();
+                }
+            }, delay * 1000);
+        }
+    }
+    
+    // Fallback timing for when Web Audio API is not available
+    startFallbackTiming() {
+        const baseInterval = (60 / this.tempo) * 1000;
+        
+        let subdivisionInterval;
+        switch (this.subdivision) {
+            case 'eighth':
+                subdivisionInterval = baseInterval / 2;
+                break;
+            case 'sixteenth':
+                subdivisionInterval = baseInterval / 4;
+                break;
+            default:
+                subdivisionInterval = baseInterval;
+                break;
+        }
+        
+        this.intervalId = setInterval(() => {
+            if (this.isPlaying) {
+                this.nextSubdivision();
+            }
+        }, subdivisionInterval);
     }
     
     togglePlayback() {
@@ -366,11 +726,66 @@ class MetronomeCore {
         // Determine if this is an emphasized beat - only emphasize explicitly selected beats
         const isEmphasized = this.emphasizedBeats.includes(this.currentBeat);
         
-        // Play the appropriate sound
-        if (this.beatSound === 'classic') {
-            this.playClassicClick(isEmphasized, isMainBeat);
-        } else {
-            this.audioManager.playBeat(this.beatSound, this.currentBeat, isEmphasized);
+        // Record audio event for performance monitoring
+        this.recordAudioEvent();
+        
+        try {
+            // Play the appropriate sound with error recovery
+            if (this.beatSound === 'classic') {
+                this.playClassicClick(isEmphasized, isMainBeat);
+            } else {
+                this.playBeatWithRecovery(this.beatSound, this.currentBeat, isEmphasized);
+            }
+        } catch (error) {
+            console.error('Error playing beat:', error);
+            this.recordAudioDropout();
+            this.handleAudioError(error);
+        }
+    }
+    
+    // Play beat with error recovery
+    async playBeatWithRecovery(soundType, beatNumber, isEmphasized) {
+        try {
+            await this.audioManager.playBeat(soundType, beatNumber, isEmphasized);
+        } catch (error) {
+            console.warn('Primary audio playback failed, trying recovery:', error);
+            
+            // Try to recover audio context
+            const recovered = await this.audioManager.ensureAudioContextReady();
+            if (recovered) {
+                try {
+                    // Try again with recovered context
+                    await this.audioManager.playBeat(soundType, beatNumber, isEmphasized);
+                    return;
+                } catch (retryError) {
+                    console.warn('Retry after recovery failed:', retryError);
+                }
+            }
+            
+            // Fallback to classic click
+            console.log('Falling back to classic click sound');
+            this.playClassicClick(isEmphasized, true);
+        }
+    }
+    
+    // Handle audio errors
+    handleAudioError(error) {
+        console.error('Audio error occurred:', error);
+        
+        // Try to recover the audio system
+        if (this.audioManager) {
+            this.audioManager.ensureAudioContextReady().then(recovered => {
+                if (recovered) {
+                    console.log('Audio system recovered successfully');
+                } else {
+                    console.error('Failed to recover audio system');
+                }
+            });
+        }
+        
+        // Notify UI of error if callback is set
+        if (this.onAudioError) {
+            this.onAudioError(error);
         }
     }
     
@@ -422,9 +837,40 @@ class MetronomeCore {
         this.tempo = Math.max(30, Math.min(300, newTempo));
         
         if (this.isPlaying) {
-            this.stop();
-            this.start();
+            // Update timing without stopping completely
+            this.updateTiming();
         }
+    }
+    
+    updateTiming() {
+        if (!this.isPlaying) return;
+        
+        // Calculate new subdivision interval
+        const baseInterval = (60 / this.tempo) * 1000;
+        let subdivisionInterval;
+        switch (this.subdivision) {
+            case 'eighth':
+                subdivisionInterval = baseInterval / 2;
+                break;
+            case 'sixteenth':
+                subdivisionInterval = baseInterval / 4;
+                break;
+            default:
+                subdivisionInterval = baseInterval;
+                break;
+        }
+        
+        this.subdivisionIntervalSeconds = subdivisionInterval / 1000;
+        
+        // Clear existing scheduling
+        if (this.schedulingInterval) {
+            clearInterval(this.schedulingInterval);
+        }
+        this.scheduledEvents = [];
+        this.nextScheduledTime = 0;
+        
+        // Restart scheduling with new timing
+        this.startAudioScheduling();
     }
     
     adjustTempo(change) {
@@ -703,6 +1149,7 @@ class UIController {
         this.setupAdvancedModeControls();
         this.setupSharedControls();
         this.setupDragAndDrop();
+        this.setupFeedbackModal();
         this.loadUserPreferences();
         
         // Set up beat change callback
@@ -913,6 +1360,21 @@ class UIController {
         const handleSpaceBar = (e) => {
             // Check if space bar is pressed
             if (e.code === 'Space' || e.keyCode === 32 || e.key === ' ') {
+                // Check if user is typing in a form field
+                const activeElement = document.activeElement;
+                const isFormField = activeElement && (
+                    activeElement.tagName === 'INPUT' ||
+                    activeElement.tagName === 'TEXTAREA' ||
+                    activeElement.contentEditable === 'true' ||
+                    activeElement.isContentEditable
+                );
+                
+                // If user is typing in a form field, don't interfere
+                if (isFormField) {
+                    console.log('Space bar pressed in form field - allowing normal typing');
+                    return true; // Allow normal space bar behavior
+                }
+                
                 // Prevent default space bar behavior (page scrolling)
                 e.preventDefault();
                 e.stopPropagation();
@@ -1620,6 +2082,136 @@ The detected tempo can be applied to your metronome by clicking the detected tem
         this.updateMetronomeButtons();
     }
     
+    setupFeedbackModal() {
+        console.log('Setting up feedback modal...');
+        
+        // Check if elements exist
+        const feedbackBtn = document.getElementById('feedbackBtn');
+        const feedbackModal = document.getElementById('feedbackModal');
+        const feedbackClose = document.getElementById('feedbackClose');
+        const feedbackCancel = document.getElementById('feedbackCancel');
+        const feedbackForm = document.getElementById('feedbackForm');
+        
+        if (!feedbackBtn) {
+            console.error('Feedback button not found!');
+            return;
+        }
+        
+        if (!feedbackModal) {
+            console.error('Feedback modal not found!');
+            return;
+        }
+        
+        console.log('Feedback elements found, setting up event listeners...');
+        
+        // Feedback button
+        feedbackBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            console.log('Feedback button clicked!');
+            this.showFeedbackModal();
+        });
+        
+        // Close button
+        if (feedbackClose) {
+            feedbackClose.addEventListener('click', () => {
+                console.log('Close button clicked!');
+                this.hideFeedbackModal();
+            });
+        }
+        
+        // Cancel button
+        if (feedbackCancel) {
+            feedbackCancel.addEventListener('click', () => {
+                console.log('Cancel button clicked!');
+                this.hideFeedbackModal();
+            });
+        }
+        
+        // Close modal when clicking outside
+        feedbackModal.addEventListener('click', (e) => {
+            if (e.target.id === 'feedbackModal') {
+                console.log('Modal background clicked!');
+                this.hideFeedbackModal();
+            }
+        });
+        
+        // Handle form submission
+        if (feedbackForm) {
+            feedbackForm.addEventListener('submit', (e) => {
+                console.log('Form submitted!');
+                this.handleFeedbackSubmission(e);
+            });
+        }
+        
+        console.log('Feedback modal setup complete!');
+    }
+    
+    showFeedbackModal() {
+        console.log('Showing feedback modal...');
+        const modal = document.getElementById('feedbackModal');
+        if (modal) {
+            modal.style.display = 'block';
+            document.body.style.overflow = 'hidden'; // Prevent background scrolling
+            console.log('Modal displayed successfully');
+        } else {
+            console.error('Modal element not found!');
+        }
+    }
+    
+    hideFeedbackModal() {
+        document.getElementById('feedbackModal').style.display = 'none';
+        document.body.style.overflow = 'auto'; // Restore scrolling
+        this.resetFeedbackForm();
+    }
+    
+    resetFeedbackForm() {
+        document.getElementById('feedbackForm').reset();
+    }
+    
+    handleFeedbackSubmission(e) {
+        e.preventDefault();
+        
+        const formData = new FormData(e.target);
+        const name = formData.get('name') || 'Anonymous';
+        const email = formData.get('email') || 'No email provided';
+        const message = formData.get('message');
+        
+        if (!message.trim()) {
+            alert('Please enter your feedback message.');
+            return;
+        }
+        
+        // Show loading state
+        const submitBtn = e.target.querySelector('.feedback-submit');
+        const originalText = submitBtn.textContent;
+        submitBtn.textContent = 'Sending...';
+        submitBtn.disabled = true;
+        
+        // Submit the form
+        fetch('feedback.php', {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => response.text())
+        .then(data => {
+            if (data.includes('success')) {
+                alert('Thank you for your feedback! We appreciate your input.');
+                this.hideFeedbackModal();
+            } else {
+                throw new Error('Server error');
+            }
+        })
+        .catch(error => {
+            console.error('Error submitting feedback:', error);
+            alert('Sorry, there was an error sending your feedback. Please try again later.');
+        })
+        .finally(() => {
+            // Restore button state
+            submitBtn.textContent = originalText;
+            submitBtn.disabled = false;
+        });
+    }
+    
     toggleCountIn() {
         if (this.core.isActive()) {
             this.core.stop();
@@ -1697,6 +2289,14 @@ document.addEventListener('DOMContentLoaded', async () => {
         // Make available globally for debugging
         window.metronome = metronomeCore;
         window.ui = uiController;
+        
+        // Add testing framework
+        window.audioTest = new AudioStabilityTest(metronomeCore);
+        
+        // Add testing commands to console
+        console.log('Audio stability testing available:');
+        console.log('- window.audioTest.quickCheck() - Run quick stability check');
+        console.log('- window.audioTest.runStabilityTest(30000) - Run full stability test (30 seconds)');
         
         // Save preferences when page unloads
         window.addEventListener('beforeunload', () => {

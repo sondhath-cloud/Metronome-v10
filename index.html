@@ -12,6 +12,7 @@
         <!-- Header -->
         <header class="app-header">
             <h1 id="appTitle">Hathaway Metronome</h1>
+            <button class="feedback-btn" id="feedbackBtn">Click here to give feedback about this app!</button>
         </header>
 
 
@@ -279,8 +280,37 @@
 
     </div>
 
+    <!-- Feedback Modal -->
+    <div class="feedback-modal" id="feedbackModal">
+        <div class="feedback-modal-content">
+            <div class="feedback-modal-header">
+                <h2>Send Feedback</h2>
+                <button class="feedback-close" id="feedbackClose">&times;</button>
+            </div>
+            <form class="feedback-form" id="feedbackForm" action="feedback.php" method="POST">
+                <div class="form-group">
+                    <label for="feedbackName">Name (optional):</label>
+                    <input type="text" id="feedbackName" name="name" placeholder="Your name">
+                </div>
+                <div class="form-group">
+                    <label for="feedbackEmail">Contact Info (optional):</label>
+                    <input type="email" id="feedbackEmail" name="email" placeholder="your.email@example.com">
+                </div>
+                <div class="form-group">
+                    <label for="feedbackMessage">Feedback:</label>
+                    <textarea id="feedbackMessage" name="message" placeholder="Please share your thoughts about this metronome app..." required></textarea>
+                </div>
+                <div class="form-actions">
+                    <button type="button" class="feedback-cancel" id="feedbackCancel">Cancel</button>
+                    <button type="submit" class="feedback-submit">Send Feedback</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <script src="audio-manager.js"></script>
     <script src="microphone-input.js"></script>
+    <script src="audio-stability-test.js"></script>
     <script src="script.js"></script>
 </body>
 </html>

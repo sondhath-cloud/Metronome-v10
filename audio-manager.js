@@ -14,6 +14,11 @@ class AudioManager {
         this.samplesLoaded = false;
         this.sampleBaseUrl = 'https://www.soundjay.com/misc/sounds/'; // Free samples source
         
+        // Audio buffer optimization
+        this.bufferSize = 4096; // Optimized buffer size for low latency
+        this.lookaheadTime = 0.1; // 100ms lookahead for scheduling
+        this.schedulingAheadTime = 0.025; // 25ms scheduling interval
+        
         // Simple initialization
         this.init();
     }
@@ -28,13 +33,45 @@ class AudioManager {
         if (/linux/.test(userAgent)) return 'linux';
         return 'unknown';
     }
+    
+    // Get optimal buffer size for the platform
+    getOptimalBufferSize() {
+        switch (this.platform) {
+            case 'ios':
+                return 1024; // Smaller buffer for iOS to reduce latency
+            case 'android':
+                return 2048; // Medium buffer for Android
+            case 'macos':
+            case 'windows':
+            case 'linux':
+                return 4096; // Larger buffer for desktop
+            default:
+                return 2048; // Default medium buffer
+        }
+    }
 
     // Initialize Audio System
     async init() {
         try {
-            // Create AudioContext
+            // Create AudioContext with optimized settings
             const AudioContextClass = window.AudioContext || window.webkitAudioContext;
-            this.audioContext = new AudioContextClass();
+            
+            // Try to create with optimal buffer size for the platform
+            const optimalBufferSize = this.getOptimalBufferSize();
+            this.audioContext = new AudioContextClass({
+                sampleRate: 44100, // Standard sample rate
+                latencyHint: 'interactive' // Low latency for metronome
+            });
+            
+            // Set buffer size if possible (some browsers don't support this)
+            if (this.audioContext.destination && this.audioContext.destination.context) {
+                try {
+                    this.audioContext.destination.context.suspend();
+                    this.audioContext.destination.context.resume();
+                } catch (e) {
+                    // Buffer size setting not supported
+                }
+            }
             
             // Create master gain node
             this.masterGain = this.audioContext.createGain();
@@ -43,6 +80,9 @@ class AudioManager {
             
             this.isAudioReady = true;
             console.log('Audio system initialized successfully');
+            
+            // Start monitoring audio context state
+            this.startAudioContextMonitoring();
             
             // Load realistic samples in the background
             this.loadRealisticSamples().catch(error => {
@@ -68,6 +108,85 @@ class AudioManager {
             }
         }
         return true;
+    }
+    
+    // Enhanced audio context management with error recovery
+    async ensureAudioContextReady() {
+        if (!this.audioContext) {
+            console.warn('Audio context not initialized, attempting to recreate...');
+            await this.init();
+            return this.isAudioReady;
+        }
+        
+        if (this.audioContext.state === 'suspended') {
+            try {
+                await this.audioContext.resume();
+                this.isAudioReady = true;
+                console.log('Audio context resumed successfully');
+                return true;
+            } catch (error) {
+                console.error('Failed to resume audio context:', error);
+                // Try to recreate the audio context
+                return await this.recreateAudioContext();
+            }
+        }
+        
+        if (this.audioContext.state === 'closed') {
+            console.warn('Audio context is closed, recreating...');
+            return await this.recreateAudioContext();
+        }
+        
+        return this.isAudioReady;
+    }
+    
+    // Recreate audio context if it fails
+    async recreateAudioContext() {
+        try {
+            // Clean up old context
+            if (this.audioContext) {
+                this.audioContext.close();
+            }
+            
+            // Create new context
+            const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+            this.audioContext = new AudioContextClass();
+            
+            // Recreate master gain
+            this.masterGain = this.audioContext.createGain();
+            this.masterGain.connect(this.audioContext.destination);
+            this.masterGain.gain.value = this.volume;
+            
+            this.isAudioReady = true;
+            console.log('Audio context recreated successfully');
+            return true;
+        } catch (error) {
+            console.error('Failed to recreate audio context:', error);
+            this.isAudioReady = false;
+            return false;
+        }
+    }
+    
+    // Monitor audio context state
+    startAudioContextMonitoring() {
+        if (!this.audioContext) return;
+        
+        // Check audio context state periodically
+        this.audioContextMonitor = setInterval(() => {
+            if (this.audioContext) {
+                const state = this.audioContext.state;
+                if (state === 'suspended' || state === 'closed') {
+                    console.warn(`Audio context state changed to: ${state}`);
+                    this.isAudioReady = false;
+                }
+            }
+        }, 1000); // Check every second
+    }
+    
+    stopAudioContextMonitoring() {
+        if (this.audioContextMonitor) {
+            clearInterval(this.audioContextMonitor);
+            this.audioContextMonitor = null;
+        }
     }
 
     // Load audio sample from URL
@@ -258,7 +377,7 @@ class AudioManager {
         }
     }
 
-    // Play click sound - sharp metronome click
+    // Play click sound - optimized for performance
     playClick(frequency = 1200, volume = 0.6, attack = 0.001, decay = 0.02, sustain = 0, release = 0.01) {
         if (!this.isAudioReady || !this.audioContext) {
             console.log('Audio not ready, skipping click');
@@ -267,43 +386,28 @@ class AudioManager {
 
         try {
             const now = this.audioContext.currentTime;
-            const duration = 0.03; // Very short for crisp click
+            const duration = 0.02; // Shorter duration for better performance
             
-            // Create multiple oscillators for a more realistic click sound
-            const osc1 = this.audioContext.createOscillator();
-            const osc2 = this.audioContext.createOscillator();
+            // Use single oscillator for better performance
+            const osc = this.audioContext.createOscillator();
             const gainNode = this.audioContext.createGain();
-            const filter = this.audioContext.createBiquadFilter();
             
-            // High frequency for sharp click
-            osc1.frequency.setValueAtTime(1200, now);
-            osc1.type = 'square'; // Square wave for sharp attack
+            // Optimized frequency and type
+            osc.frequency.setValueAtTime(frequency, now);
+            osc.type = 'square'; // Square wave is most efficient
             
-            // Add harmonic for more click character
-            osc2.frequency.setValueAtTime(2400, now);
-            osc2.type = 'triangle';
-            
-            // High-pass filter to emphasize the click
-            filter.type = 'highpass';
-            filter.frequency.setValueAtTime(800, now);
-            filter.Q.setValueAtTime(1, now);
-            
-            // Very sharp envelope - quick attack and immediate decay
+            // Simplified envelope for better performance
             gainNode.gain.setValueAtTime(0, now);
-            gainNode.gain.linearRampToValueAtTime(volume * this.volume, now + 0.001); // Instant attack
-            gainNode.gain.exponentialRampToValueAtTime(0.001, now + duration); // Sharp decay
+            gainNode.gain.linearRampToValueAtTime(volume * this.volume, now + attack);
+            gainNode.gain.exponentialRampToValueAtTime(0.001, now + duration);
             
-            // Connect audio graph
-            osc1.connect(filter);
-            osc2.connect(filter);
-            filter.connect(gainNode);
+            // Direct connection for minimal CPU usage
+            osc.connect(gainNode);
             gainNode.connect(this.masterGain);
             
             // Play the click
-            osc1.start(now);
-            osc1.stop(now + duration);
-            osc2.start(now);
-            osc2.stop(now + duration);
+            osc.start(now);
+            osc.stop(now + duration);
             
         } catch (error) {
             console.warn('Error playing click:', error);
@@ -452,8 +556,10 @@ class AudioManager {
     }
 
     // Main playBeat method - handles different sound types
-    playBeat(soundType = 'classic', beatNumber = 1, isEmphasized = false) {
-        if (!this.isAudioReady || !this.audioContext) {
+    async playBeat(soundType = 'classic', beatNumber = 1, isEmphasized = false) {
+        // Ensure audio context is ready before playing
+        const isReady = await this.ensureAudioContextReady();
+        if (!isReady) {
             console.log('Audio not ready, skipping beat');
             return;
         }
@@ -730,6 +836,7 @@ class AudioManager {
 
     // Cleanup
     destroy() {
+        this.stopAudioContextMonitoring();
         if (this.audioContext) {
             this.audioContext.close();
         }

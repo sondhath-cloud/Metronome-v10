@@ -19,17 +19,20 @@ This is a complete, self-contained metronome application ready for deployment. A
 - **Visual Displays**: Pulsing circle, beat dots, or both
 - **Silent Patterns**: Create custom mute patterns
 - **Dark Mode**: Toggle between light and dark themes
+- **Feedback System**: Users can submit feedback directly through the app
 
 ## File Structure
 ```
 dist/
-├── index.html          # Main application file
-├── style.css           # Styling and responsive design
-├── script.js           # Main application logic
-├── audio-manager.js    # Audio system and TTS
-├── microphone-input.js # Microphone tempo detection
-├── README.md           # Project documentation
-└── DEPLOYMENT.md       # This file
+├── index.html              # Main application file
+├── style.css               # Styling and responsive design
+├── script.js               # Main application logic
+├── audio-manager.js        # Audio system and TTS
+├── microphone-input.js     # Microphone tempo detection
+├── audio-stability-test.js # Audio stability testing
+├── feedback.php            # Feedback form handler (PHP)
+├── README.md               # Project documentation
+└── DEPLOYMENT.md           # This file
 ```
 
 ## Browser Requirements
@@ -43,6 +46,26 @@ dist/
 - Responsive design adapts to different screen sizes
 - Works offline after initial load
 
+## Feedback System
+The app includes a built-in feedback system that allows users to submit feedback directly through the interface:
+- **Feedback Button**: Green button below the main title
+- **Modal Form**: Opens when feedback button is clicked
+- **Email Integration**: Uses `feedback.php` to send emails to configured address
+- **Form Fields**: Name (optional), Email (optional), Message (required)
+- **Email Recipient**: Configured to send to `sondhath@gmail.com`
+
+### Feedback System Requirements
+- PHP support on your web server
+- Email functionality enabled (PHP mail() function)
+- All files must be uploaded to the same directory
+
+### Customizing Feedback Email
+To change the feedback email recipient:
+1. Open `feedback.php`
+2. Find the line: `$to = 'sondhath@gmail.com';`
+3. Change to your preferred email address
+4. Save and re-upload the file
+
 ## Version
-Hathaway Metronome v10 - Clean Distribution Package
-Generated: $(date)
+Hathaway Metronome v10 - Clean Distribution Package with Feedback System
+Generated: December 2024

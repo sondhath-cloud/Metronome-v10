@@ -35,6 +35,35 @@ body {
     font-weight: 300;
     color: #333;
     transition: all 0.3s ease;
+    margin-bottom: 15px;
+}
+
+/* Feedback Button */
+.feedback-btn {
+    background-color: #4CAF50 !important;
+    color: white !important;
+    border: none !important;
+    padding: 12px 24px !important;
+    border-radius: 8px !important;
+    font-size: 1rem !important;
+    font-weight: 500 !important;
+    cursor: pointer !important;
+    transition: all 0.3s ease !important;
+    box-shadow: 0 2px 8px rgba(76, 175, 80, 0.3) !important;
+    display: inline-block !important;
+    text-decoration: none !important;
+    margin-top: 10px !important;
+}
+
+.feedback-btn:hover {
+    background-color: #45a049 !important;
+    transform: translateY(-2px) !important;
+    box-shadow: 0 4px 12px rgba(76, 175, 80, 0.4) !important;
+    color: white !important;
+}
+
+.feedback-btn:active {
+    transform: translateY(0) !important;
 }
 
 
@@ -656,6 +685,8 @@ body.dark-mode .tap-tempo-section h3 {
 
 .microphone-section {
     text-align: center;
+    overflow: hidden;
+    word-wrap: break-word;
 }
 
 .microphone-section h3 {
@@ -807,21 +838,26 @@ body.dark-mode .tap-tempo-section h3 {
     align-items: center;
     gap: 10px;
     margin-bottom: 15px;
+    flex-wrap: wrap;
+    width: 100%;
 }
 
 .sensitivity-slider-container label {
     font-size: 0.9rem;
     color: #666;
-    min-width: 120px;
+    min-width: 100px;
+    flex-shrink: 0;
 }
 
 .sensitivity-slider {
     flex: 1;
+    min-width: 80px;
     height: 6px;
     border-radius: 3px;
     background: #ddd;
     outline: none;
     -webkit-appearance: none;
+    max-width: 150px;
 }
 
 .sensitivity-slider::-webkit-slider-thumb {
@@ -846,8 +882,10 @@ body.dark-mode .tap-tempo-section h3 {
 .sensitivity-value {
     font-weight: bold;
     color: #4CAF50;
-    min-width: 40px;
+    min-width: 35px;
     text-align: right;
+    flex-shrink: 0;
+    font-size: 0.9rem;
 }
 
 .interval-controls {
@@ -1024,6 +1062,163 @@ body.dark-mode .tap-tempo-section h3 {
 .info em {
     font-style: italic;
     color: #333;
+}
+
+/* Feedback Modal */
+.feedback-modal {
+    display: none;
+    position: fixed;
+    z-index: 1000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(5px);
+}
+
+.feedback-modal-content {
+    background-color: white;
+    margin: 5% auto;
+    padding: 0;
+    border-radius: 12px;
+    width: 90%;
+    max-width: 500px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+    animation: modalSlideIn 0.3s ease;
+}
+
+@keyframes modalSlideIn {
+    from {
+        opacity: 0;
+        transform: translateY(-50px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.feedback-modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px 30px;
+    border-bottom: 1px solid #eee;
+    background-color: #f8f9fa;
+    border-radius: 12px 12px 0 0;
+}
+
+.feedback-modal-header h2 {
+    margin: 0;
+    color: #333;
+    font-size: 1.5rem;
+    font-weight: 500;
+}
+
+.feedback-close {
+    background: none;
+    border: none;
+    font-size: 2rem;
+    cursor: pointer;
+    color: #666;
+    padding: 0;
+    width: 30px;
+    height: 30px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    transition: all 0.2s ease;
+}
+
+.feedback-close:hover {
+    background-color: #e9ecef;
+    color: #333;
+}
+
+.feedback-form {
+    padding: 30px;
+}
+
+.form-group {
+    margin-bottom: 20px;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 8px;
+    color: #333;
+    font-weight: 500;
+    font-size: 0.9rem;
+}
+
+.form-group input,
+.form-group textarea {
+    width: 100%;
+    padding: 12px;
+    border: 2px solid #ddd;
+    border-radius: 6px;
+    font-size: 1rem;
+    transition: border-color 0.3s ease;
+    box-sizing: border-box;
+}
+
+.form-group input:focus,
+.form-group textarea:focus {
+    outline: none;
+    border-color: #4CAF50;
+    box-shadow: 0 0 0 3px rgba(76, 175, 80, 0.1);
+}
+
+.form-group textarea {
+    min-height: 120px;
+    resize: vertical;
+    font-family: inherit;
+}
+
+.form-actions {
+    display: flex;
+    gap: 12px;
+    justify-content: flex-end;
+    margin-top: 30px;
+}
+
+.feedback-cancel,
+.feedback-submit {
+    padding: 12px 24px;
+    border: none;
+    border-radius: 6px;
+    font-size: 1rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.feedback-cancel {
+    background-color: #f8f9fa;
+    color: #666;
+    border: 2px solid #ddd;
+}
+
+.feedback-cancel:hover {
+    background-color: #e9ecef;
+    border-color: #bbb;
+}
+
+.feedback-submit {
+    background-color: #4CAF50;
+    color: white;
+}
+
+.feedback-submit:hover {
+    background-color: #45a049;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(76, 175, 80, 0.3);
+}
+
+.feedback-submit:active {
+    transform: translateY(0);
 }
 
 /* Responsive Design - Mobile and Tablet */
@@ -1533,6 +1728,69 @@ body.dark-mode .metronome-countin-btn.counting-in:hover {
     background-color: #616161;
 }
 
+/* Dark mode styles for feedback modal */
+body.dark-mode .feedback-modal-content {
+    background-color: #2d2d2d;
+    color: #e0e0e0;
+}
+
+body.dark-mode .feedback-modal-header {
+    background-color: #3d3d3d;
+    border-color: #555;
+}
+
+body.dark-mode .feedback-modal-header h2 {
+    color: #e0e0e0;
+}
+
+body.dark-mode .feedback-close {
+    color: #b0b0b0;
+}
+
+body.dark-mode .feedback-close:hover {
+    background-color: #4d4d4d;
+    color: #e0e0e0;
+}
+
+body.dark-mode .form-group label {
+    color: #e0e0e0;
+}
+
+body.dark-mode .form-group input,
+body.dark-mode .form-group textarea {
+    background-color: #3d3d3d;
+    border-color: #555;
+    color: #e0e0e0;
+}
+
+body.dark-mode .form-group input:focus,
+body.dark-mode .form-group textarea:focus {
+    border-color: #4CAF50;
+    box-shadow: 0 0 0 3px rgba(76, 175, 80, 0.2);
+}
+
+body.dark-mode .feedback-cancel {
+    background-color: #3d3d3d;
+    color: #b0b0b0;
+    border-color: #555;
+}
+
+body.dark-mode .feedback-cancel:hover {
+    background-color: #4d4d4d;
+    border-color: #666;
+}
+
+/* Dark mode styles for feedback button */
+body.dark-mode .feedback-btn {
+    background-color: #4CAF50 !important;
+    color: white !important;
+}
+
+body.dark-mode .feedback-btn:hover {
+    background-color: #45a049 !important;
+    color: white !important;
+}
+
 /* Responsive design for microphone controls */
 @media (max-width: 768px) {
     .microphone-status {
@@ -1558,6 +1816,11 @@ body.dark-mode .metronome-countin-btn.counting-in:hover {
         min-width: auto;
     }
     
+    .sensitivity-slider {
+        max-width: 100%;
+        width: 100%;
+    }
+    
     .interval-controls {
         flex-direction: column;
         gap: 10px;
@@ -1576,5 +1839,45 @@ body.dark-mode .metronome-countin-btn.counting-in:hover {
     .metronome-countin-btn {
         min-width: auto;
         width: 100%;
+    }
+    
+    /* Feedback modal responsive */
+    .feedback-modal-content {
+        width: 95%;
+        margin: 10% auto;
+    }
+    
+    .feedback-modal-header {
+        padding: 15px 20px;
+    }
+    
+    .feedback-form {
+        padding: 20px;
+    }
+    
+    .form-actions {
+        flex-direction: column;
+        gap: 10px;
+    }
+    
+    .feedback-cancel,
+    .feedback-submit {
+        width: 100%;
+    }
+}
+
+/* Additional responsive fixes for smaller screens */
+@media (max-width: 1024px) {
+    .sensitivity-slider-container {
+        flex-wrap: wrap;
+    }
+    
+    .sensitivity-slider {
+        max-width: 120px;
+    }
+    
+    .sensitivity-value {
+        min-width: 30px;
+        font-size: 0.8rem;
     }
 }
