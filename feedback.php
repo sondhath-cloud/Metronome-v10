@@ -22,13 +22,18 @@ if (empty($message)) {
     exit;
 }
 
+if (empty($email)) {
+    echo 'error: Email address is required';
+    exit;
+}
+
 // Sanitize inputs to prevent XSS
 $name = htmlspecialchars($name, ENT_QUOTES, 'UTF-8');
 $email = filter_var($email, FILTER_SANITIZE_EMAIL);
 $message = htmlspecialchars($message, ENT_QUOTES, 'UTF-8');
 
-// Validate email format if provided
-if (!empty($email) && !filter_var($email, FILTER_VALIDATE_EMAIL)) {
+// Validate email format
+if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
     echo 'error: Invalid email format';
     exit;
 }
@@ -42,7 +47,7 @@ $subject = 'Metronome App Feedback - ' . date('Y-m-d H:i:s');
 // Create email body
 $emailBody = "New feedback received from the Hathaway Metronome App:\n\n";
 $emailBody .= "Name: " . $name . "\n";
-$emailBody .= "Email: " . ($email ? $email : 'Not provided') . "\n";
+$emailBody .= "Email: " . $email . "\n";
 $emailBody .= "Date: " . date('Y-m-d H:i:s') . "\n";
 $emailBody .= "IP Address: " . $_SERVER['REMOTE_ADDR'] . "\n\n";
 $emailBody .= "Message:\n";

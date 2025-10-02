@@ -2173,11 +2173,23 @@ The detected tempo can be applied to your metronome by clicking the detected tem
         
         const formData = new FormData(e.target);
         const name = formData.get('name') || 'Anonymous';
-        const email = formData.get('email') || 'No email provided';
+        const email = formData.get('email');
         const message = formData.get('message');
         
         if (!message.trim()) {
             alert('Please enter your feedback message.');
+            return;
+        }
+        
+        if (!email.trim()) {
+            alert('Please enter your email address.');
+            return;
+        }
+        
+        // Validate email format
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(email)) {
+            alert('Please enter a valid email address.');
             return;
         }
         
